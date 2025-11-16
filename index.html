@@ -279,6 +279,17 @@
       height: 100%;
     }
 
+    .lane-selection {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: rgba(47, 91, 234, 0.12);
+      border-left: 2px solid var(--accent);
+      border-right: 2px solid var(--accent);
+      pointer-events: none;
+      opacity: 0;
+    }
+
     .placeholder {
       border: 1px dashed var(--border);
       border-radius: 12px;
@@ -323,26 +334,45 @@
 
     .progress-track {
       flex: 1;
-      height: 10px;
-      border-radius: 999px;
-      background: var(--border);
+      height: 32px;
+      border-radius: 12px;
+      background: #eff1f7;
       position: relative;
       overflow: hidden;
     }
 
     .progress-window {
       position: absolute;
-      top: 0;
-      bottom: 0;
-      border-radius: 999px;
+      top: 6px;
+      bottom: 6px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      border: 1px solid var(--accent);
+    }
+
+    .progress-window::before,
+    .progress-window::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      bottom: -4px;
+      width: 4px;
       background: var(--accent);
-      opacity: 0.35;
+      border-radius: 2px;
+    }
+
+    .progress-window::before {
+      left: -2px;
+    }
+
+    .progress-window::after {
+      right: -2px;
     }
 
     .progress-cursor {
       position: absolute;
-      top: -4px;
-      bottom: -4px;
+      top: 0;
+      bottom: 0;
       width: 2px;
       background: var(--accent);
       opacity: 0;
