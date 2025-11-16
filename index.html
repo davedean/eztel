@@ -1208,18 +1208,25 @@
       const viewEnd = state.viewWindow?.end ?? endDistance;
 
       const buttons = [];
-      buttons.push(createSectorButton('All', startDistance, endDistance, isWindowMatch(viewStart, viewEnd, startDistance, endDistance)));
+      const createButton = (label, start, end) => {
+        const isActive = isWindowMatch(viewStart, viewEnd, start, end);
+        const button = createSectorButton(label, start, end, isActive);
+        buttons.push(button);
+      };
 
-      (lap.sectors || []).forEach((sector, idx) => {
+      createButton('All', startDistance, endDistance);
+
+      const sectorEntries = lap.sectors || [];
+      sectorEntries.forEach((sector, idx) => {
         const label = sector.label || `S${sector.index ?? idx + 1}`;
         const start = sector.start ?? startDistance;
         const end = sector.end ?? endDistance;
-        buttons.push(createSectorButton(label, start, end, isWindowMatch(viewStart, viewEnd, start, end)));
+        createButton(label, start, end);
       });
 
-      buttons.forEach((btn) => sectorButtons.appendChild(btn));
+      buttons.forEach((button) => sectorButtons.appendChild(button));
 
-      if (!(lap.sectors || []).length) {
+      if (!sectorEntries.length) {
         const placeholder = document.createElement('span');
         placeholder.className = 'sector-placeholder';
         placeholder.textContent = 'No sector data available for this lap.';
