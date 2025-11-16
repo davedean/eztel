@@ -1,22 +1,20 @@
-(function (app) {
-  function updateMetadata(lap) {
-    const elements = app.elements;
-    if (!elements) return;
-    if (!lap) {
-      elements.metaTrack.textContent = '—';
-      elements.metaCar.textContent = '—';
-      elements.metaDriver.textContent = '—';
-      elements.metaLapTime.textContent = '—';
-      elements.metaSamples.textContent = '—';
-      return;
-    }
+import { elements } from './elements.js';
+import { formatSeconds } from './parser.js';
 
-    elements.metaTrack.textContent = lap.metadata.track;
-    elements.metaCar.textContent = lap.metadata.car;
-    elements.metaDriver.textContent = lap.metadata.driver || '—';
-    elements.metaLapTime.textContent = app.formatSeconds(lap.metadata.lapTime);
-    elements.metaSamples.textContent = lap.samples.length.toLocaleString();
+export function updateMetadata(lap) {
+  if (!elements.metaTrack) return;
+  if (!lap) {
+    elements.metaTrack.textContent = '—';
+    elements.metaCar.textContent = '—';
+    elements.metaDriver.textContent = '—';
+    elements.metaLapTime.textContent = '—';
+    elements.metaSamples.textContent = '—';
+    return;
   }
 
-  app.updateMetadata = updateMetadata;
-})(window.LMUApp = window.LMUApp || {});
+  elements.metaTrack.textContent = lap.metadata.track;
+  elements.metaCar.textContent = lap.metadata.car;
+  elements.metaDriver.textContent = lap.metadata.driver || '—';
+  elements.metaLapTime.textContent = formatSeconds(lap.metadata.lapTime);
+  elements.metaSamples.textContent = lap.samples.length.toLocaleString();
+}

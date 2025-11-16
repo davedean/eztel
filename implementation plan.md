@@ -58,11 +58,15 @@ Record answers in this file (or a follow-up) before assigning to developers.
 
 ### 1. Project skeleton (0.5 day)
 
+**Status:** ✅ Completed – `index.html` now provides the responsive HTML shell, fonts, and Chart.js include used by the app.
+
 1. Create `index.html` with base HTML structure, linked stylesheet, and script section (or external `app.js`).
 2. Add meta tags for responsive layout and basic styling placeholder (dark theme per current sketch).
 3. Include Chart.js (CDN script tag) to avoid build tooling initially.
 
 ### 2. Shared data structures & utilities (0.5 day)
+
+**Status:** ✅ Completed – `state.js`, `elements.js`, and `utils.js` define the shared Lap data model, colour palette, DOM helpers, and formatting utilities.
 
 1. Define JS types (via JSDoc or TypeScript if desired later) for `Lap` and `LapSample`.
 2. Implement a colour palette generator for distinguishing multiple laps (e.g., hue rotation).
@@ -70,11 +74,15 @@ Record answers in this file (or a follow-up) before assigning to developers.
 
 ### 3. File ingestion layer (0.5 day)
 
+**Status:** ✅ Completed – drag/drop plus hidden file input are wired through `handleFiles`, enforcing client-side-only processing with user feedback.
+
 1. Build drag-and-drop zone + hidden `<input type="file" multiple>`; style per design.
 2. Wire drop/click events to a `handleFiles(FileList)` function.
 3. Ensure only text files are processed; surface errors to status area if parsing fails.
 
 ### 4. Parsing module (1 day)
+
+**Status:** ✅ Completed – `parser.js` normalises LMU CSV exports, maps headers, builds Lap/LapSample objects, and raises descriptive errors.
 
 1. Implement `parseLapFile(rawText, fileName)`:
    * Detect delimiter (`;` vs `,`); the provided sample uses commas but includes decimal periods and bracketed units in headers.
@@ -92,17 +100,23 @@ Record answers in this file (or a follow-up) before assigning to developers.
 
 ### 5. Application state & UI integration (0.5 day)
 
+**Status:** ✅ Completed – global state (laps, colours, view window, cursor) drives metadata, lane visibility, and shared cursor interactions.
+
 1. Maintain `const laps = []` (store parsed `Lap` objects) plus `viewState = {activeLapId, windowStart, windowEnd, cursorDistance}`; MVP can default to `activeLapId = laps[0]?.id`.
 2. Render lap list dynamically even if only one lap is supported initially; disable multi-select controls but keep structure ready for future toggles.
 3. Capture per-lane visibility toggles and preferences (e.g., show/hide gear lane) in state for future persistence.
 
 ### 6. Layout & lane scaffolding (0.75 day)
 
+**Status:** ✅ Completed – light-themed Garage 61 layout is implemented with track panel, stacked lane cards, and placeholders for future charts.
+
 1. Build responsive light-themed layout: left column reserved for track map (~30% width), right column stacked telemetry lanes, sector strip along bottom spanning width.
 2. Implement reusable “lane” component wrapper (title, legend placeholders, canvas/container) with theme variables for consistent colours.
 3. For MVP, fully render throttle and brake lanes; include placeholders for speed, gear+RPM, steering so they can be enabled later without HTML restructuring.
 
 ### 7. Lane rendering (1.25 days)
+
+**Status:** ✅ Completed – throttle and brake lanes render via Chart.js with synced hover cursors and datasets for multiple laps.
 
 1. Implement Chart.js (or Canvas) renderers for throttle and brake lanes sharing a common X axis (lap distance or time). Keep helper utilities generic so additional lanes can reuse them.
 2. Feed lanes with the single active lap; ensure colour palettes align with light theme readability.
@@ -111,11 +125,15 @@ Record answers in this file (or a follow-up) before assigning to developers.
 
 ### 8. Track map placeholder (0.75 day)
 
+**Status:** ✅ Completed – `trackMap.js` plots lap geometry, highlights the current view window, and displays cursor dots per visible lap.
+
 1. Use telemetry `X [m]`/`Y [m]` columns to plot the lap path in the left panel using a light-theme-friendly stroke.
 2. Highlight the current cursor position (from lane hover) on the track map; MVP can simply draw a small dot and show the lap outline without zooming.
 3. Prepare hooks for future zoom-to-selection behaviour: support drawing sub-path segments when given `startDistance`/`endDistance`, but keep the MVP fixed to the full lap.
 
 ### 9. Sector strip (0.5 day)
+
+**Status:** ✅ Completed – the sector bar renders the “All” button plus any parsed sectors, and the progress track supports drag-to-zoom & cursor preview.
 
 1. For MVP, render a single “Sector 1” button covering the whole lap; clicking it resets `viewWindow` to the entire lap.
 2. Display a lap progress bar beneath the button to familiarise users with the future interaction zone; highlight the current view window (entire lap initially).
@@ -123,12 +141,16 @@ Record answers in this file (or a follow-up) before assigning to developers.
 
 ### 10. Validation & UX polish (0.5 day)
 
+**Status:** ⏳ In progress – still need structured testing across varied lap files, explicit performance profiling with multi-lap loads, and polished UX copy (privacy/instructions).
+
 1. Test with sample lap files of varying delimiters to ensure parsing robustness.
 2. Confirm performance with multiple large files (profiling via browser dev tools).
 3. Add copy in the UI describing privacy guarantees (no upload, runs client-side).
 4. Provide quick instructions near drop zone (supported formats, max size, etc.).
 
 ### 11. Packaging & deployment (0.5 day)
+
+**Status:** ✅ Completed – README documents file and nginx usage; the app runs cleanly on a static HTTP server.
 
 1. Add minimal README covering usage (open `index.html` via `file://` or serve via lightweight HTTP server) and telemetry file expectations.
 2. Provide instructions for running an nginx Docker container to serve the static files locally (e.g., `docker run -v $(pwd):/usr/share/nginx/html:ro -p 8080:80 nginx`).
