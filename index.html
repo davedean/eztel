@@ -333,12 +333,14 @@
     }
 
     .progress-track {
-      flex: 1;
+      width: 100%;
       height: 32px;
       border-radius: 12px;
-      background: #eff1f7;
+      background: #e4e8f2;
       position: relative;
       overflow: hidden;
+      border: 1px solid var(--border);
+      cursor: crosshair;
     }
 
     .progress-window {
@@ -348,6 +350,8 @@
       border-radius: 8px;
       background: var(--accent-soft);
       border: 1px solid var(--accent);
+      left: 0;
+      width: 100%;
     }
 
     .progress-window::before,
@@ -777,6 +781,7 @@
           });
         }
       }
+      sectors.sort((a, b) => (a.start ?? 0) - (b.start ?? 0));
       return sectors;
     }
 
@@ -1060,7 +1065,7 @@
       function toCanvasCoords(sample) {
         const planeY = getPlanarY(sample);
         const x = paddingX + (sample.x - minX) * scaleX;
-        const y = trackCanvas.height - paddingY - (planeY - minY) * scaleY;
+        const y = paddingY + (planeY - minY) * scaleY;
         return { x, y };
       }
 
@@ -1116,15 +1121,21 @@
         .filter(Boolean);
 
       if (state.cursorDistance != null) {
-        const sample = findSampleAtDistance(lap.samples, state.cursorDistance);
-        const planeY = sample ? getPlanarY(sample) : null;
-        if (sample && sample.x != null && planeY != null) {
-          const { x, y } = toCanvasCoords(sample);
-          ctx.fillStyle = getLapColor(lap.id);
-          ctx.beginPath();
-          ctx.arc(x, y, 5, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        state.laps.forEach((lapItem) => {
+          if (!state.lapVisibility.has(lapItem.id)) return;
+          const sample = findSampleAtDistance(lapItem.samples, state.cursorDistance);
+          const planeY = sample ? getPlanarY(sample) : null;
+          if (sample && sample.x != null && planeY != null) {
+            const { x, y } = toCanvasCoords(sample);
+            ctx.fillStyle = getLapColor(lapItem.id);
+            ctx.beginPath();
+            ctx.arc(x, y, lapItem.id === lap.id ? 6 : 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        });
       }
     }
 
