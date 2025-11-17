@@ -15,7 +15,10 @@ export function initProgressControls(deps) {
   const dragState = {
     active: false,
     startRatio: 0,
-    endRatio: 1
+    endRatio: 1,
+    mode: 'select',
+    windowStartRatio: 0,
+    windowWidthRatio: 1
   };
 
   function getProgressRatio(event) {
@@ -43,33 +46,87 @@ export function initProgressControls(deps) {
     setCursorDistance((start + end) / 2);
   }
 
+  function applySlide(currentRatio) {
+    const lap = getActiveLap();
+    if (!lap) return;
+    const minDistance = lap.samples[0].distance;
+    const maxDistance = lap.metadata.lapLength || lap.samples[lap.samples.length - 1].distance;
+    const totalSpan = maxDistance - minDistance || 1;
+    const widthRatio = dragState.windowWidthRatio;
+    let startRatio = dragState.windowStartRatio + (currentRatio - dragState.startRatio);
+    startRatio = Math.max(0, Math.min(1 - widthRatio, startRatio));
+    const endRatio = startRatio + widthRatio;
+    const start = minDistance + totalSpan * startRatio;
+    const end = minDistance + totalSpan * endRatio;
+    setViewWindow(lap, start, end);
+    setCursorDistance((start + end) / 2);
+  }
+
+  function getWindowRatios(lap) {
+    if (!lap) {
+      return { start: 0, width: 1 };
+    }
+    const minDistance = lap.samples[0].distance;
+    const maxDistance = lap.metadata.lapLength || lap.samples[lap.samples.length - 1].distance;
+    const span = maxDistance - minDistance || 1;
+    const viewStart = uiState.viewWindow?.start ?? minDistance;
+    const viewEnd = uiState.viewWindow?.end ?? maxDistance;
+    const startRatio = Math.max(0, Math.min(1, (viewStart - minDistance) / span));
+    const endRatio = Math.max(0, Math.min(1, (viewEnd - minDistance) / span));
+    return {
+      start: startRatio,
+      width: Math.max(0.0025, endRatio - startRatio || 1)
+    };
+  }
+
   elements.progressTrack.addEventListener('pointerdown', (event) => {
     const lap = getActiveLap();
     if (!lap) return;
     elements.progressTrack.setPointerCapture(event.pointerId);
     dragState.active = true;
     const ratio = getProgressRatio(event);
-    dragState.startRatio = ratio;
-    dragState.endRatio = ratio;
-    applyDragSelection();
+    const windowRatios = getWindowRatios(lap);
+    const isWithinWindow =
+      (elements.progressWindow && elements.progressWindow.contains(event.target)) ||
+      ratio >= windowRatios.start && ratio <= windowRatios.start + windowRatios.width;
+    if (isWithinWindow) {
+      dragState.mode = 'slide';
+      dragState.windowStartRatio = windowRatios.start;
+      dragState.windowWidthRatio = windowRatios.width;
+      dragState.startRatio = ratio;
+    } else {
+      dragState.mode = 'select';
+      dragState.startRatio = ratio;
+      dragState.endRatio = ratio;
+      applyDragSelection();
+    }
   });
 
   elements.progressTrack.addEventListener('pointermove', (event) => {
     if (!dragState.active) return;
-    dragState.endRatio = getProgressRatio(event);
-    applyDragSelection();
+    if (dragState.mode === 'slide') {
+      applySlide(getProgressRatio(event));
+    } else {
+      dragState.endRatio = getProgressRatio(event);
+      applyDragSelection();
+    }
   });
 
   function endDrag(event) {
     if (!dragState.active) return;
-    dragState.endRatio = getProgressRatio(event);
+    if (dragState.mode === 'slide') {
+      applySlide(getProgressRatio(event));
+    } else {
+      dragState.endRatio = getProgressRatio(event);
+      applyDragSelection();
+    }
     dragState.active = false;
+    dragState.mode = 'select';
     try {
       elements.progressTrack.releasePointerCapture(event.pointerId);
     } catch {
       // Ignore release failures since pointer may already be uncaptured.
     }
-    applyDragSelection();
   }
 
   elements.progressTrack.addEventListener('pointerup', endDrag);

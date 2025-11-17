@@ -481,6 +481,8 @@
         border: 1px solid var(--accent);
         left: 0;
         width: 100%;
+        cursor: grab;
+        transition: cursor 0.2s ease;
       }
 
       .progress-window::before,
@@ -649,3 +651,6 @@
     <script type="module" src="js/app.js"></script>
   </body>
 </html>
+      .progress-window:active {
+        cursor: grabbing;
+      }
