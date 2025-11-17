@@ -49,6 +49,31 @@ export function getLapColor(lapId) {
 }
 
 /**
+ * Recompute lap colours so palette indices always follow lapOrder.
+ */
+export function syncLapColorsToOrder() {
+  const orderedIds = telemetryState.lapOrder.length
+    ? telemetryState.lapOrder.filter((lapId) =>
+        telemetryState.laps.some((lap) => lap.id === lapId)
+      )
+    : telemetryState.laps.map((lap) => lap.id);
+
+  telemetryState.lapColors.clear();
+  orderedIds.forEach((lapId, index) => {
+    const color = PALETTE[index % PALETTE.length];
+    telemetryState.lapColors.set(lapId, color);
+  });
+
+  telemetryState.laps
+    .map((lap) => lap.id)
+    .filter((lapId) => !telemetryState.lapColors.has(lapId))
+    .forEach((lapId) => {
+      const color = PALETTE[telemetryState.lapColors.size % PALETTE.length];
+      telemetryState.lapColors.set(lapId, color);
+    });
+}
+
+/**
  * Retrieve the currently active lap, or fall back to the first loaded lap.
  * @returns {Lap|null}
  */

@@ -28,7 +28,7 @@ export const CHART_BASE_OPTIONS = {
     }
   },
   plugins: {
-    legend: { display: true, position: 'bottom', labels: { boxWidth: 12 } },
+    legend: { display: false, position: 'bottom', labels: { boxWidth: 12 } },
     tooltip: { enabled: true }
   }
 };

@@ -1,6 +1,13 @@
 import { loadLapFiles } from './fileLoader.js';
 import { elements, initDomElements } from './elements.js';
-import { telemetryState, uiState, getActiveLap, setActiveLapId, resetState } from './state.js';
+import {
+  telemetryState,
+  uiState,
+  getActiveLap,
+  setActiveLapId,
+  resetState,
+  syncLapColorsToOrder
+} from './state.js';
 import { updateMetadata } from './metadata.js';
 import { initCharts, updateLaneData, applyWindowToCharts, refreshCharts } from './charts.js';
 import { renderTrackMap, initTrackHover } from './trackMap.js';
@@ -142,7 +149,7 @@ function activateLap(lapId) {
   } else if (!applyPersistentWindow(lap)) {
     setViewWindow(lap);
   }
-  updateMetadata(lap);
+  updateMetadata();
   updateLaneData();
   renderLapList();
 }
@@ -168,6 +175,7 @@ function moveLap(lapId, direction) {
   const targetIndex = direction === 'up' ? index - 1 : index + 1;
   if (targetIndex < 0 || targetIndex >= order.length) return;
   [order[index], order[targetIndex]] = [order[targetIndex], order[index]];
+  syncLapColorsToOrder();
   renderLapList();
   updateLaneData();
 }

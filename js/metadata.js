@@ -1,7 +1,9 @@
 import { elements } from './elements.js';
 import { formatSeconds } from './parser.js';
+import { getActiveLap } from './state.js';
 
-export function updateMetadata(lap) {
+export function updateMetadata(lapArg) {
+  const lap = lapArg === undefined ? getActiveLap() : lapArg;
   if (!elements.metaTrack) return;
   if (!lap) {
     elements.metaTrack.textContent = '—';
