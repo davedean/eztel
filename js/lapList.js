@@ -1,4 +1,4 @@
-import { state, getLapColor } from './state.js';
+import { telemetryState, uiState, getLapColor } from './state.js';
 import { elements } from './elements.js';
 import { formatSeconds } from './parser.js';
 
@@ -30,7 +30,7 @@ export function initLapListInteractions(deps) {
 export function renderLapList() {
   if (!elements?.lapList) return;
   elements.lapList.innerHTML = '';
-  if (!state.laps.length) {
+  if (!telemetryState.laps.length) {
     const li = document.createElement('li');
     li.className = 'status';
     li.textContent = 'No laps loaded yet.';
@@ -38,11 +38,11 @@ export function renderLapList() {
     return;
   }
 
-  state.laps.forEach((lap) => {
+  telemetryState.laps.forEach((lap) => {
     const li = document.createElement('li');
     const entry = document.createElement('button');
     entry.type = 'button';
-    entry.className = `lap-entry${lap.id === state.activeLapId ? ' active' : ''}`;
+    entry.className = `lap-entry${lap.id === uiState.activeLapId ? ' active' : ''}`;
     entry.dataset.lapId = lap.id;
     const color = getLapColor(lap.id);
     const driverLabel =
@@ -56,7 +56,7 @@ export function renderLapList() {
         <span class="lap-meta-line">${metaLine || lap.metadata.car || ''}</span>
       </span>
       <label class="lap-visibility">
-        <input type="checkbox" ${state.lapVisibility.has(lap.id) ? 'checked' : ''} data-visibility-id="${lap.id}" />
+        <input type="checkbox" ${telemetryState.lapVisibility.has(lap.id) ? 'checked' : ''} data-visibility-id="${lap.id}" />
         <span>Visible</span>
       </label>
     `;

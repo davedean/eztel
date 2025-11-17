@@ -2,18 +2,18 @@
 
 Suggested next steps to harden the LMU Lap Viewer and keep the refactor momentum going.
 
-## Quality & Reliability
+## Quality & Reliability _(✅ Completed)_
 
-- **Unit / integration tests**: introduce a small test harness (Vitest/Jest) focused on pure modules (`parser.js`, `state.js`, `utils.js`). Start with parsing edge cases (different delimiters, missing columns), sector derivation, and lap colour assignment. Add DOM smoke tests with @testing-library/dom once the pure logic has coverage.
-- **Static analysis**: wire up ESLint + Prettier to catch unused imports, enforce consistent style, and protect the ES-module structure we just restored.
-- **Type safety**: consider JSDoc or TypeScript definitions for the `Lap`/`LapSample` shape; this will make cross-module refactors safer and ease future API integrations.
+- **Unit / integration tests**: ✅ Parser/state specs now live under `tests/` and run via `npm test`, catching parsing regressions early.
+- **Static analysis**: ✅ ESLint + Prettier are configured (see `eslint.config.js`, `.prettierrc`, `npm run lint` / `npm run format`).
+- **Type safety**: ✅ Lap/LapSample/state helpers expose JSDoc typings so cross-module refactors keep consistent shapes.
 
-## Architecture & Readability
+## Architecture & Readability *(✅ Completed)*
 
-- **State management cleanup**: `state.js` still mixes data, view window, and chart caches. Break it into distinct concerns (telemetry data vs UI artifacts) or wrap in a lightweight store class so mutations become explicit and easier to trace.
-- **DOM init lifecycle**: move the `initDomElements()` call behind a `DOMContentLoaded` guard (or hydrate through a main `init()` that runs once) to guarantee predictable ordering even when the script is bundled.
-- **Config extraction**: palettes, Chart.js options, and layout constants could live in `config.js` to simplify future theming.
-- **Error handling UX**: centralise user-facing errors in one module (toast/banner) so parse failures, chart errors, or drag/drop restrictions surface consistently instead of only logging to the console.
+- **State management cleanup**: ✅ `state.js` now separates telemetry/ui/projection/chart registries, making mutations explicit across modules.
+- **DOM init lifecycle**: ✅ App bootstrap waits for `DOMContentLoaded`, so DOM lookups/event bindings only run once the document is ready.
+- **Config extraction**: ✅ Shared palette/status/chart defaults live in `config.js` for reuse and theming.
+- **Error handling UX**: ✅ `notifications.js` centralises status/error messaging and styles, replacing scattered `console.warn` calls.
 
 ## Features & UX
 

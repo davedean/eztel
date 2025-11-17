@@ -43,9 +43,3 @@ export function initDomElements() {
 export function getSectorCursor() {
   return sectorCursor;
 }
-
-export function setStatus(message) {
-  if (elements.status) {
-    elements.status.textContent = message;
-  }
-}

@@ -1,5 +1,6 @@
 /* global Chart */
-import { state, getActiveLap, getLapColor } from './state.js';
+import { telemetryState, uiState, chartRegistry, getActiveLap, getLapColor } from './state.js';
+import { CHART_BASE_OPTIONS } from './config.js';
 import { formatLapLabel } from './utils.js';
 
 let setCursorDistance = () => {};
@@ -13,10 +14,10 @@ export function initCharts(deps) {
   Chart.register({
     id: 'sharedCursor',
     afterDatasetsDraw(chart) {
-      if (state.cursorDistance == null) return;
+      if (uiState.cursorDistance == null) return;
       const xScale = chart.scales.x;
       if (!xScale) return;
-      const xPixel = xScale.getPixelForValue(state.cursorDistance);
+      const xPixel = xScale.getPixelForValue(uiState.cursorDistance);
       if (Number.isNaN(xPixel)) return;
       const ctx = chart.ctx;
       ctx.save();
@@ -33,7 +34,7 @@ export function initCharts(deps) {
 }
 
 export function updateLaneData() {
-  const visibleLaps = state.laps.filter((lap) => state.lapVisibility.has(lap.id));
+  const visibleLaps = telemetryState.laps.filter((lap) => telemetryState.lapVisibility.has(lap.id));
 
   const throttleChart = ensureChart('throttle', 'throttleLane');
   throttleChart.data.datasets = visibleLaps.map((lap) => ({
@@ -61,15 +62,15 @@ export function updateLaneData() {
 }
 
 export function applyWindowToCharts() {
-  Object.values(state.charts).forEach((chart) => chart && applyWindowToChart(chart));
+  Object.values(chartRegistry).forEach((chart) => chart && applyWindowToChart(chart));
 }
 
 export function refreshCharts() {
-  Object.values(state.charts).forEach((chart) => chart && chart.update('none'));
+  Object.values(chartRegistry).forEach((chart) => chart && chart.update('none'));
 }
 
 function ensureChart(key, canvasId) {
-  if (state.charts[key]) return state.charts[key];
+  if (chartRegistry[key]) return chartRegistry[key];
   const canvas = document.getElementById(canvasId);
   if (!canvas) {
     throw new Error(`Canvas ${canvasId} not found`);
@@ -82,29 +83,7 @@ function ensureChart(key, canvasId) {
   const chart = new Chart(ctx, {
     type: 'line',
     data: { datasets: [] },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      interaction: { mode: 'nearest', intersect: false },
-      scales: {
-        x: {
-          type: 'linear',
-          title: { display: true, text: 'Distance (m)' },
-          grid: { color: '#eef1f6' }
-        },
-        y: {
-          beginAtZero: true,
-          suggestedMax: 100,
-          title: { display: true, text: '% input' },
-          grid: { color: '#eef1f6' }
-        }
-      },
-      plugins: {
-        legend: { display: true, position: 'bottom', labels: { boxWidth: 12 } },
-        tooltip: { enabled: true }
-      }
-    }
+    options: cloneChartOptions()
   });
 
   const pointerState = { active: false, start: null, end: null };
@@ -197,7 +176,7 @@ function ensureChart(key, canvasId) {
   chart.canvas.addEventListener('pointerleave', endLaneDrag);
 
   chart._selectionOverlay = overlay;
-  state.charts[key] = chart;
+  chartRegistry[key] = chart;
   return chart;
 }
 
@@ -226,11 +205,11 @@ function setOverlayRange(chart, startValue, endValue, opacity = 0.25) {
 
 function syncLaneSelectionOverlay(chart) {
   const lap = getActiveLap();
-  if (!lap || !state.viewWindow) {
+  if (!lap || !uiState.viewWindow) {
     setOverlayRange(chart, null, null);
     return;
   }
-  setOverlayRange(chart, state.viewWindow.start, state.viewWindow.end, 0.2);
+  setOverlayRange(chart, uiState.viewWindow.start, uiState.viewWindow.end, 0.2);
 }
 
 function applyWindowToChart(chart) {
@@ -240,10 +219,16 @@ function applyWindowToChart(chart) {
     chart.update('none');
     return;
   }
-  const start = state.viewWindow?.start ?? lap.samples[0].distance;
-  const end = state.viewWindow?.end ?? lap.samples[lap.samples.length - 1].distance;
+  const start = uiState.viewWindow?.start ?? lap.samples[0].distance;
+  const end = uiState.viewWindow?.end ?? lap.samples[lap.samples.length - 1].distance;
   chart.options.scales.x.min = start;
   chart.options.scales.x.max = end;
   chart.update('none');
   syncLaneSelectionOverlay(chart);
+}
+
+function cloneChartOptions() {
+  return typeof structuredClone === 'function'
+    ? structuredClone(CHART_BASE_OPTIONS)
+    : JSON.parse(JSON.stringify(CHART_BASE_OPTIONS));
 }

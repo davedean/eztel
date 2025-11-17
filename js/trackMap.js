@@ -1,5 +1,5 @@
 import { elements } from './elements.js';
-import { state, getLapColor, getActiveLap } from './state.js';
+import { telemetryState, uiState, projectionState, getLapColor, getActiveLap } from './state.js';
 import { findSampleAtDistance } from './utils.js';
 
 export function renderTrackMap(lap) {
@@ -7,13 +7,13 @@ export function renderTrackMap(lap) {
   const canvas = elements.trackCanvas;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!lap || !state.lapVisibility.size) {
+  if (!lap || !telemetryState.lapVisibility.size) {
     ctx.fillStyle = '#adb3c2';
     ctx.font = '14px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('Load a lap to view the track map', canvas.width / 2, canvas.height / 2);
-    state.trackProjectionLapId = null;
-    state.trackProjectionPoints = [];
+    projectionState.sourceLapId = null;
+    projectionState.points = [];
     return;
   }
 
@@ -28,13 +28,13 @@ export function renderTrackMap(lap) {
       canvas.width / 2,
       canvas.height / 2
     );
-    state.trackProjectionLapId = null;
-    state.trackProjectionPoints = [];
+    projectionState.sourceLapId = null;
+    projectionState.points = [];
     return;
   }
 
-  const windowStart = state.viewWindow?.start ?? lap.samples[0].distance;
-  const windowEnd = state.viewWindow?.end ?? lap.samples[lap.samples.length - 1].distance;
+  const windowStart = uiState.viewWindow?.start ?? lap.samples[0].distance;
+  const windowEnd = uiState.viewWindow?.end ?? lap.samples[lap.samples.length - 1].distance;
   const totalSpan = lap.samples[lap.samples.length - 1].distance - lap.samples[0].distance || 1;
   const windowSpan = windowEnd - windowStart;
   const shouldZoom = windowSpan < totalSpan * 0.98;
@@ -79,8 +79,8 @@ export function renderTrackMap(lap) {
     return { x, y };
   }
 
-  state.laps.forEach((lapItem) => {
-    if (!state.lapVisibility.has(lapItem.id)) return;
+  telemetryState.laps.forEach((lapItem) => {
+    if (!telemetryState.lapVisibility.has(lapItem.id)) return;
     const lapPoints = lapItem.samples.filter((s) => s.x != null && getPlanarY(s) != null);
     if (!lapPoints.length) return;
     const lapColor = getLapColor(lapItem.id);
@@ -120,8 +120,8 @@ export function renderTrackMap(lap) {
     ctx.globalAlpha = 1;
   }
 
-  state.trackProjectionLapId = lap.id;
-  state.trackProjectionPoints = lap.samples
+  projectionState.sourceLapId = lap.id;
+  projectionState.points = lap.samples
     .map((sample) => {
       const planeY = getPlanarY(sample);
       if (sample.x == null || planeY == null) return null;
@@ -130,10 +130,10 @@ export function renderTrackMap(lap) {
     })
     .filter(Boolean);
 
-  if (state.cursorDistance != null) {
-    state.laps.forEach((lapItem) => {
-      if (!state.lapVisibility.has(lapItem.id)) return;
-      const sample = findSampleAtDistance(lapItem.samples, state.cursorDistance);
+  if (uiState.cursorDistance != null) {
+    telemetryState.laps.forEach((lapItem) => {
+      if (!telemetryState.lapVisibility.has(lapItem.id)) return;
+      const sample = findSampleAtDistance(lapItem.samples, uiState.cursorDistance);
       const planeY = sample ? getPlanarY(sample) : null;
       if (sample && sample.x != null && planeY != null) {
         const { x, y } = toCanvasCoords(sample);
@@ -153,14 +153,13 @@ export function initTrackHover({ setCursorDistance }) {
   if (!elements?.trackCanvas) return;
   elements.trackCanvas.addEventListener('mousemove', (event) => {
     const lap = getActiveLap();
-    if (!lap || state.trackProjectionLapId !== lap.id || !state.trackProjectionPoints.length)
-      return;
+    if (!lap || projectionState.sourceLapId !== lap.id || !projectionState.points.length) return;
     const rect = elements.trackCanvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
     let nearest = null;
     let best = Infinity;
-    for (const point of state.trackProjectionPoints) {
+    for (const point of projectionState.points) {
       const dx = point.x - x;
       const dy = point.y - y;
       const dist = dx * dx + dy * dy;

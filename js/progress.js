@@ -1,4 +1,4 @@
-import { state, getActiveLap } from './state.js';
+import { uiState, getActiveLap } from './state.js';
 import { elements, getSectorCursor } from './elements.js';
 
 let setViewWindow = () => {};
@@ -115,8 +115,8 @@ export function updateProgressWindow(lap) {
   const total = lap.metadata.lapLength || lap.samples[lap.samples.length - 1].distance;
   const minDistance = lap.samples[0].distance;
   const span = total - minDistance || total || 1;
-  const start = (state.viewWindow?.start ?? minDistance) - minDistance;
-  const end = (state.viewWindow?.end ?? total) - minDistance;
+  const start = (uiState.viewWindow?.start ?? minDistance) - minDistance;
+  const end = (uiState.viewWindow?.end ?? total) - minDistance;
   const left = (start / span) * 100;
   const width = ((end - start) / span) * 100;
   elements.progressWindow.style.left = `${Math.max(0, Math.min(100, left))}%`;
@@ -151,8 +151,8 @@ export function renderSectorButtons(lap) {
   const startDistance = lap.samples[0]?.distance ?? 0;
   const endDistance =
     (lap.metadata.lapLength || lap.samples[lap.samples.length - 1]?.distance) ?? startDistance;
-  const viewStart = state.viewWindow?.start ?? startDistance;
-  const viewEnd = state.viewWindow?.end ?? endDistance;
+  const viewStart = uiState.viewWindow?.start ?? startDistance;
+  const viewEnd = uiState.viewWindow?.end ?? endDistance;
 
   const buttons = [];
   const createButton = (label, start, end) => {

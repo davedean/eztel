@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { state, getLapColor, resetState, setActiveLapId } from '../js/state.js';
+import { telemetryState, uiState, getLapColor, resetState, setActiveLapId } from '../js/state.js';
 
 test('getLapColor cycles palette deterministically', () => {
   resetState();
@@ -12,11 +12,11 @@ test('getLapColor cycles palette deterministically', () => {
 });
 
 test('resetState clears laps and visibility', () => {
-  state.laps.push({ id: 'lap-a', samples: [], metadata: {} });
-  state.lapVisibility.add('lap-a');
+  telemetryState.laps.push({ id: 'lap-a', samples: [], metadata: {} });
+  telemetryState.lapVisibility.add('lap-a');
   setActiveLapId('lap-a');
   resetState();
-  assert.equal(state.laps.length, 0);
-  assert.equal(state.lapVisibility.size, 0);
-  assert.equal(state.activeLapId, null);
+  assert.equal(telemetryState.laps.length, 0);
+  assert.equal(telemetryState.lapVisibility.size, 0);
+  assert.equal(uiState.activeLapId, null);
 });
