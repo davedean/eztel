@@ -500,9 +500,32 @@
               <canvas id="brakeLane"></canvas>
             </div>
           </div>
-          <div class="placeholder">
-            Speed, Gear/RPM, and Steering lanes will appear here once throttle &amp; brake are
-            finalised.
+          <div class="lane">
+            <div class="lane-header">
+              <span class="lane-title">Speed</span>
+              <span class="lane-hint">km/h vs distance</span>
+            </div>
+            <div class="lane-canvas">
+              <canvas id="speedLane"></canvas>
+            </div>
+          </div>
+          <div class="lane">
+            <div class="lane-header">
+              <span class="lane-title">Gear &amp; RPM</span>
+              <span class="lane-hint">gear &amp; rpm vs distance</span>
+            </div>
+            <div class="lane-canvas">
+              <canvas id="gearRpmLane"></canvas>
+            </div>
+          </div>
+          <div class="lane">
+            <div class="lane-header">
+              <span class="lane-title">Steering</span>
+              <span class="lane-hint">% vs distance</span>
+            </div>
+            <div class="lane-canvas">
+              <canvas id="steeringLane"></canvas>
+            </div>
           </div>
         </div>
       </section>
@@ -520,3 +543,9 @@
     <script type="module" src="js/app.js"></script>
   </body>
 </html>
+.lap-entry .lap-actions { display: flex; flex-direction: column; gap: 0.2rem; margin-left: 0.5rem; }
+.lap-entry .lap-actions button { border: 1px solid var(--border); background: #fff; border-radius:
+4px; width: 24px; height: 20px; font-size: 0.65rem; cursor: pointer; } .lap-entry .lap-chips {
+display: flex; flex-wrap: wrap; gap: 0.25rem; font-size: 0.7rem; color: var(--muted); } .lap-entry
+.lap-chip { border: 1px solid var(--border); border-radius: 999px; padding: 0.1rem 0.5rem;
+background: var(--bg); }

@@ -6,13 +6,16 @@ import { PALETTE } from './config.js';
 export const telemetryState = {
   laps: /** @type {Lap[]} */ ([]),
   lapVisibility: new Set(),
-  lapColors: new Map()
+  lapColors: new Map(),
+  lapOrder: /** @type {string[]} */ ([])
 };
 
 export const uiState = {
   activeLapId: /** @type {string|null} */ (null),
   viewWindow: /** @type {{start: number, end: number}|null} */ (null),
-  cursorDistance: /** @type {number|null} */ (null)
+  cursorDistance: /** @type {number|null} */ (null),
+  savedWindows: new Map(),
+  persistentWindowRatio: /** @type {{startRatio: number, endRatio: number}|null} */ (null)
 };
 
 export const projectionState = {
@@ -76,9 +79,12 @@ export function resetState() {
   telemetryState.laps = [];
   telemetryState.lapVisibility.clear();
   telemetryState.lapColors.clear();
+  telemetryState.lapOrder = [];
   uiState.activeLapId = null;
   uiState.viewWindow = null;
   uiState.cursorDistance = null;
+  uiState.savedWindows.clear();
+  uiState.persistentWindowRatio = null;
   projectionState.sourceLapId = null;
   projectionState.points = [];
   Object.keys(chartRegistry).forEach((key) => {

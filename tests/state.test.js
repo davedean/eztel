@@ -14,9 +14,11 @@ test('getLapColor cycles palette deterministically', () => {
 test('resetState clears laps and visibility', () => {
   telemetryState.laps.push({ id: 'lap-a', samples: [], metadata: {} });
   telemetryState.lapVisibility.add('lap-a');
+  telemetryState.lapOrder.push('lap-a');
   setActiveLapId('lap-a');
   resetState();
   assert.equal(telemetryState.laps.length, 0);
   assert.equal(telemetryState.lapVisibility.size, 0);
+  assert.equal(telemetryState.lapOrder.length, 0);
   assert.equal(uiState.activeLapId, null);
 });

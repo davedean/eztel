@@ -4,14 +4,26 @@ import { formatSeconds } from './parser.js';
 
 let activateLap = () => {};
 let handleVisibilityChange = () => {};
+let moveLap = () => {};
 
 export function initLapListInteractions(deps) {
   activateLap = deps.activateLap;
   handleVisibilityChange = deps.handleVisibilityChange;
+  moveLap = deps.moveLap;
 
   if (!elements?.lapList) return;
 
   elements.lapList.addEventListener('click', (event) => {
+    const moveButton = event.target.closest('button[data-move]');
+    if (moveButton) {
+      const entry = moveButton.closest('.lap-entry');
+      if (entry?.dataset.lapId) {
+        moveLap(entry.dataset.lapId, moveButton.dataset.move);
+      }
+      event.stopPropagation();
+      return;
+    }
+
     const toggle = event.target.closest('input[data-visibility-id]');
     if (toggle) {
       handleVisibilityChange(toggle.dataset.visibilityId, toggle.checked);
@@ -38,7 +50,14 @@ export function renderLapList() {
     return;
   }
 
-  telemetryState.laps.forEach((lap) => {
+  const lapMap = new Map(telemetryState.laps.map((lap) => [lap.id, lap]));
+  const orderedIds = telemetryState.lapOrder.length
+    ? telemetryState.lapOrder
+    : telemetryState.laps.map((lap) => lap.id);
+
+  orderedIds.forEach((lapId) => {
+    const lap = lapMap.get(lapId);
+    if (!lap) return;
     const li = document.createElement('li');
     const entry = document.createElement('button');
     entry.type = 'button';
@@ -54,11 +73,19 @@ export function renderLapList() {
       <span class="lap-text">
         <span class="lap-name">${lap.metadata.track}</span>
         <span class="lap-meta-line">${metaLine || lap.metadata.car || ''}</span>
+        <div class="lap-chips">
+          <span class="lap-chip">${lap.metadata.car}</span>
+          <span class="lap-chip">${lap.samples.length.toLocaleString()} samples</span>
+        </div>
       </span>
       <label class="lap-visibility">
         <input type="checkbox" ${telemetryState.lapVisibility.has(lap.id) ? 'checked' : ''} data-visibility-id="${lap.id}" />
         <span>Visible</span>
       </label>
+      <div class="lap-actions">
+        <button type="button" data-move="up" title="Move lap up">▲</button>
+        <button type="button" data-move="down" title="Move lap down">▼</button>
+      </div>
     `;
     li.appendChild(entry);
     elements.lapList.appendChild(li);

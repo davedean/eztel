@@ -13,6 +13,12 @@ import {
 import { initLapListInteractions, renderLapList } from './lapList.js';
 import { showMessage, showError } from './notifications.js';
 
+const PREFS_KEY = 'lmuLapViewerPrefs';
+let preferences = loadPreferences();
+if (preferences.windowRatio) {
+  uiState.persistentWindowRatio = preferences.windowRatio;
+}
+
 function bootstrap() {
   initDomElements();
 
@@ -21,7 +27,8 @@ function bootstrap() {
   initProgressControls({ getActiveLap, setViewWindow, setCursorDistance });
   initLapListInteractions({
     activateLap,
-    handleVisibilityChange
+    handleVisibilityChange,
+    moveLap
   });
 
   if (elements.dropzone) {
@@ -108,6 +115,8 @@ function setViewWindow(lap, start, end) {
     start: Math.max(minDistance, Math.min(maxDistance, windowStart)),
     end: Math.max(minDistance, Math.min(maxDistance, windowEnd))
   };
+  uiState.savedWindows.set(lap.id, { ...uiState.viewWindow });
+  persistWindowPreference(lap, uiState.viewWindow);
   updateProgressWindow(lap);
   renderTrackMap(lap);
   renderSectorButtons(lap);
@@ -127,7 +136,12 @@ function activateLap(lapId) {
   setActiveLapId(lapId);
   uiState.cursorDistance = null;
   telemetryState.lapVisibility.add(lapId);
-  setViewWindow(lap);
+  const savedWindow = uiState.savedWindows.get(lap.id);
+  if (savedWindow) {
+    setViewWindow(lap, savedWindow.start, savedWindow.end);
+  } else if (!applyPersistentWindow(lap)) {
+    setViewWindow(lap);
+  }
   updateMetadata(lap);
   updateLaneData();
   renderLapList();
@@ -147,6 +161,17 @@ function handleVisibilityChange(lapId, visible) {
   renderLapList();
 }
 
+function moveLap(lapId, direction) {
+  const order = telemetryState.lapOrder;
+  const index = order.indexOf(lapId);
+  if (index === -1) return;
+  const targetIndex = direction === 'up' ? index - 1 : index + 1;
+  if (targetIndex < 0 || targetIndex >= order.length) return;
+  [order[index], order[targetIndex]] = [order[targetIndex], order[index]];
+  renderLapList();
+  updateLaneData();
+}
+
 function clearLaps() {
   resetState();
   updateMetadata(null);
@@ -156,4 +181,50 @@ function clearLaps() {
   renderSectorButtons(null);
   renderLapList();
   showMessage('Cleared all laps.', 'success');
+}
+
+function persistWindowPreference(lap, window) {
+  if (!lap || !window) return;
+  const minDistance = lap.samples[0].distance;
+  const maxDistance = lap.metadata.lapLength || lap.samples[lap.samples.length - 1].distance;
+  const span = maxDistance - minDistance || 1;
+  const ratio = {
+    startRatio: Math.max(0, Math.min(1, (window.start - minDistance) / span)),
+    endRatio: Math.max(0, Math.min(1, (window.end - minDistance) / span))
+  };
+  uiState.persistentWindowRatio = ratio;
+  savePreferences({ windowRatio: ratio });
+}
+
+function applyPersistentWindow(lap) {
+  if (!uiState.persistentWindowRatio) return false;
+  const range = getWindowFromRatio(lap, uiState.persistentWindowRatio);
+  setViewWindow(lap, range.start, range.end);
+  return true;
+}
+
+function getWindowFromRatio(lap, ratio) {
+  const minDistance = lap.samples[0].distance;
+  const maxDistance = lap.metadata.lapLength || lap.samples[lap.samples.length - 1].distance;
+  const span = maxDistance - minDistance || 1;
+  return {
+    start: minDistance + span * Math.max(0, Math.min(1, ratio.startRatio)),
+    end: minDistance + span * Math.max(0, Math.min(1, ratio.endRatio))
+  };
+}
+
+function loadPreferences() {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function savePreferences(next) {
+  if (typeof localStorage === 'undefined') return;
+  preferences = { ...preferences, ...next };
+  localStorage.setItem(PREFS_KEY, JSON.stringify(preferences));
 }

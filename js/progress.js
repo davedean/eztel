@@ -99,7 +99,18 @@ export function initProgressControls(deps) {
     if (!button) return;
     const lap = getActiveLap();
     if (!lap) return;
-    setViewWindow(lap, Number(button.dataset.start), Number(button.dataset.end));
+    const start = Number(button.dataset.start);
+    const end = Number(button.dataset.end);
+    if (event.metaKey || event.ctrlKey) {
+      const existing = uiState.savedWindows.get(lap.id) ?? uiState.viewWindow ?? { start, end };
+      const merged = {
+        start: Math.min(existing.start, start),
+        end: Math.max(existing.end, end)
+      };
+      setViewWindow(lap, merged.start, merged.end);
+    } else {
+      setViewWindow(lap, start, end);
+    }
   });
 }
 

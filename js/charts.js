@@ -6,6 +6,62 @@ import { formatLapLabel } from './utils.js';
 let setCursorDistance = () => {};
 let setViewWindow = () => {};
 
+const laneConfigs = [
+  {
+    key: 'throttle',
+    canvasId: 'throttleLane',
+    buildDatasets: createBasicDatasetBuilder('throttle'),
+    options: {}
+  },
+  {
+    key: 'brake',
+    canvasId: 'brakeLane',
+    buildDatasets: createBasicDatasetBuilder('brake'),
+    options: {}
+  },
+  {
+    key: 'speed',
+    canvasId: 'speedLane',
+    buildDatasets: createBasicDatasetBuilder('speed', 'Speed'),
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
+          suggestedMax: 350,
+          title: { display: true, text: 'Speed (km/h)' }
+        }
+      }
+    }
+  },
+  {
+    key: 'gearRpm',
+    canvasId: 'gearRpmLane',
+    buildDatasets: buildGearRpmDatasets,
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
+          suggestedMax: 7,
+          title: { display: true, text: 'Gear' }
+        },
+        rpm: {
+          position: 'right',
+          beginAtZero: true,
+          suggestedMax: 11000,
+          title: { display: true, text: 'RPM' },
+          grid: { display: false }
+        }
+      }
+    }
+  },
+  {
+    key: 'steering',
+    canvasId: 'steeringLane',
+    buildDatasets: createBasicDatasetBuilder('steer', 'Steering'),
+    options: {}
+  }
+];
+
 export function initCharts(deps) {
   setCursorDistance = deps.setCursorDistance;
   setViewWindow = deps.setViewWindow;
@@ -36,29 +92,11 @@ export function initCharts(deps) {
 export function updateLaneData() {
   const visibleLaps = telemetryState.laps.filter((lap) => telemetryState.lapVisibility.has(lap.id));
 
-  const throttleChart = ensureChart('throttle', 'throttleLane');
-  throttleChart.data.datasets = visibleLaps.map((lap) => ({
-    label: formatLapLabel(lap),
-    borderColor: getLapColor(lap.id),
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    pointRadius: 0,
-    data: lap.samples
-      .filter((s) => s.throttle != null)
-      .map((s) => ({ x: s.distance, y: s.throttle }))
-  }));
-  applyWindowToChart(throttleChart);
-
-  const brakeChart = ensureChart('brake', 'brakeLane');
-  brakeChart.data.datasets = visibleLaps.map((lap) => ({
-    label: formatLapLabel(lap),
-    borderColor: getLapColor(lap.id),
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    pointRadius: 0,
-    data: lap.samples.filter((s) => s.brake != null).map((s) => ({ x: s.distance, y: s.brake }))
-  }));
-  applyWindowToChart(brakeChart);
+  laneConfigs.forEach((config) => {
+    const chart = ensureChart(config.key, config.canvasId, config.options);
+    chart.data.datasets = visibleLaps.flatMap((lap) => config.buildDatasets(lap));
+    applyWindowToChart(chart);
+  });
 }
 
 export function applyWindowToCharts() {
@@ -69,7 +107,7 @@ export function refreshCharts() {
   Object.values(chartRegistry).forEach((chart) => chart && chart.update('none'));
 }
 
-function ensureChart(key, canvasId) {
+function ensureChart(key, canvasId, laneOptions) {
   if (chartRegistry[key]) return chartRegistry[key];
   const canvas = document.getElementById(canvasId);
   if (!canvas) {
@@ -83,7 +121,7 @@ function ensureChart(key, canvasId) {
   const chart = new Chart(ctx, {
     type: 'line',
     data: { datasets: [] },
-    options: cloneChartOptions()
+    options: mergeOptions(cloneChartOptions(), laneOptions)
   });
 
   const pointerState = { active: false, start: null, end: null };
@@ -231,4 +269,71 @@ function cloneChartOptions() {
   return typeof structuredClone === 'function'
     ? structuredClone(CHART_BASE_OPTIONS)
     : JSON.parse(JSON.stringify(CHART_BASE_OPTIONS));
+}
+
+function mergeOptions(base, overrides = {}) {
+  if (!overrides) return base;
+  Object.entries(overrides).forEach(([key, value]) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      base[key] = mergeOptions(base[key] || {}, value);
+    } else {
+      base[key] = value;
+    }
+  });
+  return base;
+}
+
+function createBasicDatasetBuilder(sampleKey, labelSuffix = '') {
+  return (lap) => {
+    const data = lap.samples
+      .filter((s) => s[sampleKey] != null)
+      .map((s) => ({ x: s.distance, y: s[sampleKey] }));
+    if (!data.length) return [];
+    const label = labelSuffix ? `${formatLapLabel(lap)} ${labelSuffix}` : formatLapLabel(lap);
+    return [
+      {
+        label,
+        borderColor: getLapColor(lap.id),
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        pointRadius: 0,
+        data
+      }
+    ];
+  };
+}
+
+function buildGearRpmDatasets(lap) {
+  const color = getLapColor(lap.id);
+  const gearData = lap.samples
+    .filter((s) => s.gear != null)
+    .map((s) => ({ x: s.distance, y: s.gear }));
+  const rpmData = lap.samples
+    .filter((s) => s.rpm != null)
+    .map((s) => ({ x: s.distance, y: s.rpm }));
+  const datasets = [];
+  if (gearData.length) {
+    datasets.push({
+      label: `${formatLapLabel(lap)} gear`,
+      borderColor: color,
+      backgroundColor: 'transparent',
+      borderWidth: 1.5,
+      borderDash: [4, 2],
+      pointRadius: 0,
+      yAxisID: 'y',
+      data: gearData
+    });
+  }
+  if (rpmData.length) {
+    datasets.push({
+      label: `${formatLapLabel(lap)} rpm`,
+      borderColor: color,
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      yAxisID: 'rpm',
+      data: rpmData
+    });
+  }
+  return datasets;
 }

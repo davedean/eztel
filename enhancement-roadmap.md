@@ -15,12 +15,12 @@ Suggested next steps to harden the LMU Lap Viewer and keep the refactor momentum
 - **Config extraction**: ✅ Shared palette/status/chart defaults live in `config.js` for reuse and theming.
 - **Error handling UX**: ✅ `notifications.js` centralises status/error messaging and styles, replacing scattered `console.warn` calls.
 
-## Features & UX
+## Features & UX _(✅ Completed)_
 
-- **Additional telemetry lanes**: now that modules are split, adding Speed, Gear/RPM, and Steering charts is straightforward—reuse `ensureChart` with lane-specific options.
-- **Sector intelligence**: show actual sector labels when available, persist the selected window across lap switches, and allow multi-sector selection (Ctrl+click) to compare combined segments.
-- **Multi-lap overlays**: extend `state.lapVisibility` into a dedicated lap manager with ordering, colour reassignment, and per-lap metadata chips.
-- **Persistence**: cache the last viewed laps or window in `localStorage` so users returning to the page pick up where they left off.
+- **Additional telemetry lanes**: ✅ Speed, Gear/RPM, and Steering charts now render alongside throttle/brake with shared cursors.
+- **Sector intelligence**: ✅ Sector buttons respect multi-select (Ctrl/Cmd) and view-window selections persist per lap and across lap switches.
+- **Multi-lap overlays**: ✅ Lap list now exposes reorder controls, metadata chips, and keeps lap order in state so overlays are easier to manage.
+- **Persistence**: ✅ View-window preferences persist via `localStorage`, restoring your preferred zoom after reloads.
 
 ## Tooling & Delivery
 

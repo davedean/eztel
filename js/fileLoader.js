@@ -12,6 +12,7 @@ export async function loadLapFiles(files) {
       const text = await file.text();
       const lap = parseLapFile(text, file.name);
       telemetryState.laps.push(lap);
+      telemetryState.lapOrder.push(lap.id);
       telemetryState.lapVisibility.add(lap.id);
       lastLoadedId = lap.id;
       getLapColor(lap.id);
