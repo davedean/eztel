@@ -32,7 +32,18 @@ export async function buildShareLink(lap, windowRange) {
   const json = JSON.stringify(payload);
   const encodedPayload = base64urlEncode(new TextEncoder().encode(json));
   const url = getBaseUrl();
-  url.searchParams.set('share', encodedPayload);
+  if (encodedPayload.length > 8000) {
+    url.searchParams.delete('share');
+    const existing = url.hash.startsWith('#') ? url.hash.slice(1) : '';
+    const params = new URLSearchParams(existing);
+    params.set('share', encodedPayload);
+    url.hash = `#${params.toString()}`;
+  } else {
+    url.searchParams.set('share', encodedPayload);
+    const params = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : '');
+    params.delete('share');
+    url.hash = params.toString() ? `#${params.toString()}` : '';
+  }
   return url.toString();
 }
 
@@ -159,8 +170,24 @@ function decodeSamples(bytes, count) {
 }
 
 async function compressBytes(bytes) {
-  // Temporarily skip compression to keep share generation snappy across browsers.
-  return { bytes, compressed: false };
+  if (typeof CompressionStream === 'undefined') {
+    console.warn('CompressionStream unavailable; skipping compression.');
+    return { bytes, compressed: false };
+  }
+  try {
+    const result = await withTimeout(async () => {
+      const stream = new CompressionStream('gzip');
+      const writer = stream.writable.getWriter();
+      await writer.write(bytes);
+      await writer.close();
+      const arrayBuffer = await new Response(stream.readable).arrayBuffer();
+      return new Uint8Array(arrayBuffer);
+    }, 2000);
+    return { bytes: result, compressed: true };
+  } catch (error) {
+    console.warn('Compression failed, using raw payload.', error);
+    return { bytes, compressed: false };
+  }
 }
 
 async function decompressBytes(bytes) {
@@ -168,12 +195,17 @@ async function decompressBytes(bytes) {
     console.warn('DecompressionStream unavailable; treating bytes as uncompressed.');
     return bytes;
   }
-  const stream = new DecompressionStream('gzip');
-  const writer = stream.writable.getWriter();
-  await writer.write(bytes);
-  await writer.close();
-  const arrayBuffer = await new Response(stream.readable).arrayBuffer();
-  return new Uint8Array(arrayBuffer);
+  try {
+    const stream = new DecompressionStream('gzip');
+    const writer = stream.writable.getWriter();
+    await writer.write(bytes);
+    await writer.close();
+    const arrayBuffer = await new Response(stream.readable).arrayBuffer();
+    return new Uint8Array(arrayBuffer);
+  } catch (error) {
+    console.warn('Decompression failed, using raw payload.', error);
+    return bytes;
+  }
 }
 
 function writeUnsignedVarint(buffer, value) {
@@ -222,9 +254,15 @@ function clamp(value, min, max) {
 
 function base64urlEncode(bytes) {
   let binary = '';
-  bytes.forEach((b) => {
-    binary += String.fromCharCode(b);
-  });
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    let chunkStr = '';
+    for (let j = 0; j < chunk.length; j++) {
+      chunkStr += String.fromCharCode(chunk[j]);
+    }
+    binary += chunkStr;
+  }
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
@@ -245,4 +283,21 @@ function base64urlDecode(value) {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
+}
+
+async function withTimeout(fn, ms) {
+  let timer;
+  return await Promise.race([
+    (async () => {
+      try {
+        const result = await fn();
+        return result;
+      } finally {
+        clearTimeout(timer);
+      }
+    })(),
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('compression timeout')), ms);
+    })
+  ]);
 }

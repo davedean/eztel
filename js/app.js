@@ -481,7 +481,8 @@ async function copyToClipboard(text) {
 
 async function handleSharedLapParam() {
   const params = new URLSearchParams(window.location.search);
-  const payload = params.get('share');
+  const hashParams = new URLSearchParams(window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '');
+  const payload = params.get('share') || hashParams.get('share');
   if (!payload) return;
   try {
     const { lap, window } = await importSharedLap(payload);
@@ -499,8 +500,10 @@ async function handleSharedLapParam() {
     showError('Failed to import shared lap.', error);
   } finally {
     params.delete('share');
+    hashParams.delete('share');
     const newQuery = params.toString();
-    const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ''}`;
+    const newHash = hashParams.toString();
+    const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ''}${newHash ? `#${newHash}` : ''}`;
     window.history.replaceState({}, '', newUrl);
   }
 }
