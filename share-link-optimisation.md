@@ -2,6 +2,8 @@
 
 Goal: keep deep-link URLs comfortably under ~15 KB while preserving chart + track visual fidelity. Current links ~30 KB for a single lap (≈16.7 KB binary payload base64-encoded).
 
+NB: Discord maxes out at 2k link url, so we should aim to be under that, by quite a margin.
+
 ## 1. Use Gzip/Brotli Compression (50–60% reduction)
 
 - **Description**: Re-enable `CompressionStream` / add a JS Gzip fallback (e.g., pako) when native APIs are unavailable.
