@@ -19,6 +19,7 @@ import {
 } from './progress.js';
 import { initLapListInteractions, renderLapList } from './lapList.js';
 import { showMessage, showError } from './notifications.js';
+import { ensureLapSignature } from './signature.js';
 
 const PREFS_KEY = 'lmuLapViewerPrefs';
 const SESSION_KEY = 'lmuLapViewerSession';
@@ -105,7 +106,14 @@ async function handleFiles(files) {
   if (!files.length) return;
   showMessage('Loading...');
 
-  const { loadedCount, failedCount, lastLoadedId, errors } = await loadLapFiles(files);
+  const {
+    loadedCount,
+    failedCount,
+    duplicateCount,
+    duplicateFiles,
+    lastLoadedId,
+    errors
+  } = await loadLapFiles(files);
   const preferredLapId = findPreferredLapId();
   if (preferredLapId) {
     activateLap(preferredLapId);
@@ -124,11 +132,19 @@ async function handleFiles(files) {
 
   const messages = [];
   if (loadedCount) messages.push(`Loaded ${loadedCount} lap${loadedCount === 1 ? '' : 's'}.`);
+  if (duplicateCount) {
+    const namePreview =
+      duplicateFiles && duplicateFiles.length
+        ? ` (${duplicateFiles.slice(0, 3).join(', ')}${duplicateFiles.length > 3 ? '…' : ''})`
+        : '';
+    messages.push(`Skipped ${duplicateCount} duplicate lap${duplicateCount === 1 ? '' : 's'}${namePreview}.`);
+  }
   if (failedCount && !errors.length) {
     messages.push(`Failed ${failedCount}. Check console for details.`);
   }
   if (!messages.length) messages.push('No laps loaded.');
-  showMessage(messages.join(' '), failedCount ? 'warning' : 'info');
+  const variant = failedCount || duplicateCount ? 'warning' : 'info';
+  showMessage(messages.join(' '), variant);
 }
 
 function setViewWindow(lap, start, end) {
@@ -305,11 +321,7 @@ function getStoredWindowRatio(lap) {
 }
 
 function getLapSignature(lap) {
-  if (!lap) return null;
-  const track = lap.metadata.track || 'unknown-track';
-  const car = lap.metadata.car || 'unknown-car';
-  const lapTime = lap.metadata.lapTime ?? lap.samples.length;
-  return `${lap.name}|${track}|${car}|${lapTime}`;
+  return ensureLapSignature(lap);
 }
 
 function applyTheme(theme, persist = true) {
@@ -384,6 +396,7 @@ function serializeLap(lap) {
   return {
     id: lap.id,
     name: lap.name,
+     signature: ensureLapSignature(lap),
     metadata: { ...lap.metadata },
     sectors: Array.isArray(lap.sectors)
       ? lap.sectors.map((sector) => ({ ...sector }))
@@ -406,11 +419,14 @@ function serializeLap(lap) {
 }
 
 function deserializeLap(raw) {
-  return {
+  const lap = {
     id: raw.id,
     name: raw.name,
+    signature: raw.signature || null,
     metadata: raw.metadata || {},
     sectors: raw.sectors || [],
     samples: Array.isArray(raw.samples) ? raw.samples : []
   };
+  ensureLapSignature(lap);
+  return lap;
 }

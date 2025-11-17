@@ -1,3 +1,5 @@
+import { createLapSignature } from './signature.js';
+
 /**
  * @typedef {Object} LapSample
  * @property {number} distance
@@ -27,6 +29,7 @@
  * @typedef {Object} Lap
  * @property {string} id
  * @property {string} name
+ * @property {string} signature
  * @property {LapMetadata} metadata
  * @property {Array<LapSample>} samples
  * @property {Array<Object>} sectors
@@ -128,28 +131,48 @@ export function parseLapFile(text, fileName) {
     headerMap.set(normaliseHeader(col), idx);
   });
 
-  const aliases = {
-    lapDistance: ['lapdistancem', 'lapdistance'],
-    lapTime: ['laptimes', 'laptime'],
-    speed: ['speedkmh', 'speed'],
-    throttle: ['throttlepercentage', 'throttlepercent', 'throttle'],
-    brake: ['brakepercentage', 'brakepercent', 'brake'],
-    steer: ['steerpercent', 'steer'],
-    x: ['xm', 'x'],
-    y: ['ym', 'y'],
-    z: ['zm', 'z'],
-    sector: ['sectorint', 'sector'],
-    gear: ['gearint', 'gear'],
-    rpm: ['enginerevsrpm', 'enginerevs', 'rpm']
+  const aliasCandidates = {
+    lapDistance: ['lapdistance', 'lapdistancem', 'distance'],
+    lapTime: ['laptime', 'laptimes', 'time'],
+    throttle: ['throttlepercentage', 'throttle'],
+    brake: ['brakepercentage', 'brake'],
+    speed: ['speedkmh', 'speed', 'kmh'],
+    steer: ['steer', 'steerpercent'],
+    gear: ['gearint', 'gear', 'gearposition'],
+    rpm: ['enginerevsrpm', 'rpm', 'revs'],
+    x: ['xm', 'worldpositionx'],
+    y: ['ym', 'worldpositiony'],
+    z: ['zm', 'worldpositionz'],
+    sector: ['sector', 'currentsector']
   };
 
-  function getValue(values, aliasList) {
-    for (const alias of aliasList) {
-      if (headerMap.has(alias)) {
-        return values[headerMap.get(alias)];
+  const aliases = {};
+  Object.entries(aliasCandidates).forEach(([key, names]) => {
+    for (const name of names) {
+      const normalized = normaliseHeader(name);
+      const idx = headerMap.get(normalized);
+      if (idx != null && idx !== -1) {
+        aliases[key] = normalized;
+        break;
       }
     }
-    return undefined;
+  });
+
+  ['lapDistance', 'lapTime'].forEach((required) => {
+    if (!aliases[required]) {
+      throw new Error(`Missing required column: ${required.toLowerCase()}`);
+    }
+  });
+
+  function getValue(row, keyOrColumn) {
+    let column = keyOrColumn;
+    if (typeof keyOrColumn === 'string' && aliases[keyOrColumn]) {
+      column = aliases[keyOrColumn];
+    }
+    if (!column) return null;
+    const idx = headerMap.get(column);
+    if (idx == null || idx < 0) return null;
+    return row[idx];
   }
 
   const samples = [];
@@ -197,10 +220,20 @@ export function parseLapFile(text, fileName) {
   samples.sort((a, b) => a.distance - b.distance);
   const lapLength = trackLength ?? samples[samples.length - 1].distance ?? null;
   const sectors = deriveSectors(samples, fallbackSectors, lapLength);
+  const signature = createLapSignature({
+    name: fileName,
+    track: trackName,
+    car: carName,
+    driver: driverName,
+    lapTime: lapTimeSeconds ?? samples[samples.length - 1]?.time ?? null,
+    lapLength,
+    sampleCount: samples.length
+  });
 
   return {
     id: `lap-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     name: fileName,
+    signature,
     metadata: {
       track: trackName || 'Unknown track',
       car: carName || 'Unknown car',
