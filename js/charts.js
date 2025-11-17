@@ -1,7 +1,7 @@
 /* global Chart */
 import { telemetryState, uiState, chartRegistry, getActiveLap, getLapColor } from './state.js';
 import { CHART_BASE_OPTIONS } from './config.js';
-import { formatLapLabel } from './utils.js';
+import { formatLapLabel, interpolateLapValue } from './utils.js';
 
 let setCursorDistance = () => {};
 let setViewWindow = () => {};
@@ -59,6 +59,20 @@ const laneConfigs = [
     canvasId: 'steeringLane',
     buildDatasets: createBasicDatasetBuilder('steer', 'Steering'),
     options: {}
+  },
+  {
+    key: 'delta',
+    canvasId: 'deltaLane',
+    buildDatasets: buildDeltaDatasets,
+    options: {
+      scales: {
+        y: {
+          title: { display: true, text: 'Delta (s)' },
+          beginAtZero: false,
+          grid: { color: '#eef1f6' }
+        }
+      }
+    }
   }
 ];
 
@@ -95,6 +109,9 @@ export function updateLaneData() {
   laneConfigs.forEach((config) => {
     const chart = ensureChart(config.key, config.canvasId, config.options);
     chart.data.datasets = visibleLaps.flatMap((lap) => config.buildDatasets(lap));
+    if (config.key === 'delta') {
+      applyDeltaScale(chart);
+    }
     applyWindowToChart(chart);
   });
 }
@@ -336,4 +353,80 @@ function buildGearRpmDatasets(lap) {
     });
   }
   return datasets;
+}
+
+function buildDeltaDatasets(lap) {
+  const reference = getActiveLap();
+  if (!reference || !reference.samples.length || !lap.samples.length) return [];
+  const hasComparison = telemetryState.laps.some(
+    (candidate) =>
+      candidate.id !== reference.id && telemetryState.lapVisibility.has(candidate.id)
+  );
+  if (lap.id === reference.id) {
+    if (!hasComparison) return [];
+    return [
+      {
+        label: `${formatLapLabel(reference)} (reference)`,
+        borderColor: '#94a3b8',
+        borderDash: [6, 4],
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        data: buildZeroLine(reference.samples)
+      }
+    ];
+  }
+  const deltaData = computeDeltaDataset(reference, lap);
+  if (!deltaData.length) return [];
+  return [
+    {
+      label: `${formatLapLabel(lap)} delta`,
+      borderColor: getLapColor(lap.id),
+      backgroundColor: 'transparent',
+      borderWidth: 2,
+      pointRadius: 0,
+      data: deltaData
+    }
+  ];
+}
+
+function buildZeroLine(samples) {
+  return samples.map((sample) => ({ x: sample.distance, y: 0 }));
+}
+
+function computeDeltaDataset(referenceLap, comparisonLap) {
+  const refSamples = referenceLap.samples;
+  const comparisonSamples = comparisonLap.samples;
+  if (!refSamples.length || !comparisonSamples.length) return [];
+  const comparisonMin = comparisonSamples[0].distance;
+  const comparisonMax = comparisonSamples[comparisonSamples.length - 1].distance;
+  if (comparisonMin == null || comparisonMax == null) return [];
+  const result = [];
+  refSamples.forEach((sample) => {
+    if (
+      sample.distance == null ||
+      sample.distance < comparisonMin ||
+      sample.distance > comparisonMax ||
+      sample.time == null
+    ) {
+      return;
+    }
+    const comparisonTime = interpolateLapValue(comparisonSamples, sample.distance, 'time');
+    if (comparisonTime == null) return;
+    result.push({ x: sample.distance, y: comparisonTime - sample.time });
+  });
+  return result;
+}
+
+function applyDeltaScale(chart) {
+  if (!chart?.options?.scales?.y) return;
+  const values = chart.data.datasets.flatMap((dataset) =>
+    Array.isArray(dataset.data)
+      ? dataset.data.map((point) => point?.y).filter((value) => Number.isFinite(value))
+      : []
+  );
+  const maxMagnitude = values.reduce((max, value) => Math.max(max, Math.abs(value)), 0);
+  const range = maxMagnitude > 0 ? maxMagnitude * 1.1 : 1;
+  chart.options.scales.y.min = -range;
+  chart.options.scales.y.max = range;
 }

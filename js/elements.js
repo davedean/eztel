@@ -12,7 +12,8 @@ export const elements = {
   trackCanvas: null,
   sectorButtons: null,
   progressWindow: null,
-  progressTrack: null
+  progressTrack: null,
+  themeToggle: null
 };
 
 let sectorCursor = null;
@@ -32,6 +33,7 @@ export function initDomElements() {
   elements.sectorButtons = document.getElementById('sectorButtons');
   elements.progressWindow = document.getElementById('progressWindow');
   elements.progressTrack = document.querySelector('.progress-track');
+  elements.themeToggle = document.getElementById('themeToggle');
 
   if (!sectorCursor && elements.progressTrack) {
     sectorCursor = document.createElement('div');

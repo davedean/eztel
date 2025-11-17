@@ -108,28 +108,28 @@ Record answers in this file (or a follow-up) before assigning to developers.
 
 ### 6. Layout & lane scaffolding (0.75 day)
 
-**Status:** ✅ Completed – light-themed Garage 61 layout is implemented with track panel, stacked lane cards, and placeholders for future charts.
+**Status:** ✅ Completed – light-themed Garage 61 layout now uses a responsive grid where the map column spans the telemetry stack, and every lane card is wired for live data.
 
 1. Build responsive light-themed layout: left column reserved for track map (~30% width), right column stacked telemetry lanes, sector strip along bottom spanning width.
 2. Implement reusable “lane” component wrapper (title, legend placeholders, canvas/container) with theme variables for consistent colours.
-3. For MVP, fully render throttle and brake lanes; include placeholders for speed, gear+RPM, steering so they can be enabled later without HTML restructuring.
+3. Render throttle, brake, speed, gear+RPM, and steering lanes within the same responsive grid so they can be shown/hidden without restructuring later.
 
 ### 7. Lane rendering (1.25 days)
 
-**Status:** ✅ Completed – throttle and brake lanes render via Chart.js with synced hover cursors and datasets for multiple laps.
+**Status:** ✅ Completed – throttle, brake, speed, gear/RPM, and steering charts all render via Chart.js with shared cursors, zoom window syncing, and multi-lap overlays tied to lap order colouring.
 
-1. Implement Chart.js (or Canvas) renderers for throttle and brake lanes sharing a common X axis (lap distance or time). Keep helper utilities generic so additional lanes can reuse them.
-2. Feed lanes with the single active lap; ensure colour palettes align with light theme readability.
-3. Synchronise hover markers across rendered lanes: when user hovers lane X, draw a vertical indicator on both throttle and brake lanes and emit cursor distance for the track map.
-4. Add lane-level controls (e.g., smoothing toggle) in state for future use even if hidden in MVP.
+1. Implement Chart.js lane configs (throttle, brake, speed, gear/RPM dual-axis, steering) sharing a common X axis and reusable dataset builders.
+2. Feed lanes with all visible laps, keeping colours in sync with lap order so overlays stay readable.
+3. Synchronise hover markers across rendered lanes: when user hovers any lane, draw a vertical indicator everywhere and emit cursor distance for the track map.
+4. Centralise lane metadata (e.g., options, axis configs) in `laneConfigs` so future per-lane toggles or smoothing controls only update one place.
 
 ### 8. Track map placeholder (0.75 day)
 
-**Status:** ✅ Completed – `trackMap.js` plots lap geometry, highlights the current view window, and displays cursor dots per visible lap.
+**Status:** ✅ Completed – `trackMap.js` plots lap geometry, highlights the current view window, and now supports cursor dots plus wheel/pan gestures that adjust the global window.
 
-1. Use telemetry `X [m]`/`Y [m]` columns to plot the lap path in the left panel using a light-theme-friendly stroke.
-2. Highlight the current cursor position (from lane hover) on the track map; MVP can simply draw a small dot and show the lap outline without zooming.
-3. Prepare hooks for future zoom-to-selection behaviour: support drawing sub-path segments when given `startDistance`/`endDistance`, but keep the MVP fixed to the full lap.
+1. Use telemetry `X [m]`/`Y [m]` columns to plot each lap path in the left panel using light-theme-friendly strokes.
+2. Highlight the current cursor position (from lane hover or map hover) on the track map and allow wheel zoom / drag pan interactions that adjust the shared distance window.
+3. Keep hooks for future zoom-to-selection behaviour: draw sub-path segments when given `startDistance`/`endDistance` and keep projection caches up to date for hover hit testing.
 
 ### 9. Sector strip (0.5 day)
 
@@ -141,7 +141,7 @@ Record answers in this file (or a follow-up) before assigning to developers.
 
 ### 10. Validation & UX polish (0.5 day)
 
-**Status:** ⏳ In progress – automated parser/state tests now live under `tests/` (run via `npm test`), but we still need broader manual/perf validation and UX copy polish (privacy messaging, drag/drop instructions).
+**Status:** ✅ Completed – parser/state tests live under `tests/`, the UI includes drop-zone instructions plus a privacy footer, and recent manual passes verified multi-lap loads and zoom interactions.
 
 1. Test with sample lap files of varying delimiters to ensure parsing robustness.
 2. Confirm performance with multiple large files (profiling via browser dev tools).
@@ -158,12 +158,12 @@ Record answers in this file (or a follow-up) before assigning to developers.
 
 ## Stretch items (post-MVP)
 
-- Multi-lap overlays: allow selecting multiple laps (from same or different files) and render them simultaneously in each lane and on the track map with distinct colours/legends.
-- Range selection / zoom sync: drag across any lane or the sector bar to define a custom window; pan/zoom updates all lanes and track map with highlighted region (mirroring Garage 61’s behaviour).
-- Delta-time trace: optional extra lane plotting reference–comparison delta when multi-lap mode is enabled.
-- Track-map zooming: smoothly zoom to highlighted range with padding on either side; consider minimap/overview for context.
+- ✅ Multi-lap overlays: selecting multiple laps renders them simultaneously in each lane, on the track map, and now feeds the delta lane via lap-order colour assignments.
+- ✅ Range selection / zoom sync: dragging across any lane or the sector bar defines a view window, while the track map supports linked zoom/pan gestures that keep all components in sync.
+- ✅ Delta-time trace: dedicated delta lane compares the active lap with every other visible lap using interpolated cumulative time deltas.
+- ✅ Track-map zooming: mouse wheel zoom and drag-to-pan keep the projection aligned with the current view window, mirroring Garage 61’s behaviour.
 - Per-sim column presets: maintain JSON mapping of known header variants (ACC, iRacing, LMU, etc.) and allow manual override if auto-detect fails.
-- Local storage: save last selected lap, active sectors, and theme preferences for quick reloads.
+- ✅ Local storage: the app persists the selected lap signature, per-lap window ratios (sector selections), and theme preference via `localStorage` so reloading the page restores your last context.
 
 ## Quality checks before handoff
 

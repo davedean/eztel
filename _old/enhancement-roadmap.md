@@ -26,4 +26,4 @@ Suggested next steps to harden the LMU Lap Viewer and keep the refactor momentum
 
 - **Build step**: even if the app stays “no-build” for now, consider adding Vite/Rollup to bundle ES modules, inline minified CSS, and ship hashed assets for production.
 - **CI hooks**: ✅ GitHub Action (`.github/workflows/ci.yml`) now runs format checks, lint, and tests on every push/PR.
-- **Documentation**: expand `README.md` with a short architecture overview and contributor guide so future collaborators understand module responsibilities quickly.
+- **Documentation**: ✅ `README.md` now includes an architecture overview plus a contributor guide that covers setup, coding standards, and required checks.

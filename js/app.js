@@ -21,10 +21,13 @@ import { initLapListInteractions, renderLapList } from './lapList.js';
 import { showMessage, showError } from './notifications.js';
 
 const PREFS_KEY = 'lmuLapViewerPrefs';
+const SESSION_KEY = 'lmuLapViewerSession';
+const DEFAULT_THEME = 'light';
 let preferences = loadPreferences();
 if (preferences.windowRatio) {
   uiState.persistentWindowRatio = preferences.windowRatio;
 }
+applyTheme(preferences.theme || DEFAULT_THEME, false);
 
 function bootstrap() {
   initDomElements();
@@ -37,6 +40,13 @@ function bootstrap() {
     handleVisibilityChange,
     moveLap
   });
+  if (elements.themeToggle) {
+    elements.themeToggle.addEventListener('click', () => {
+      const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    });
+    updateThemeToggle(document.documentElement.dataset.theme || DEFAULT_THEME);
+  }
 
   if (elements.dropzone) {
     elements.dropzone.addEventListener('click', () => elements.fileInput?.click());
@@ -67,9 +77,22 @@ function bootstrap() {
 
   elements.clearLapsBtn?.addEventListener('click', () => clearLaps());
 
-  renderTrackMap(null);
-  renderLapList();
-  renderSectorButtons(null);
+  const restored = restoreLapSession();
+  if (restored) {
+    const preferred = findPreferredLapId() || telemetryState.laps[0]?.id || null;
+    if (preferred) {
+      activateLap(preferred);
+    } else {
+      updateMetadata(null);
+      renderTrackMap(null);
+      renderLapList();
+      renderSectorButtons(null);
+    }
+  } else {
+    renderTrackMap(null);
+    renderLapList();
+    renderSectorButtons(null);
+  }
 }
 
 if (document.readyState === 'loading') {
@@ -83,14 +106,17 @@ async function handleFiles(files) {
   showMessage('Loading...');
 
   const { loadedCount, failedCount, lastLoadedId, errors } = await loadLapFiles(files);
-
-  if (lastLoadedId) {
+  const preferredLapId = findPreferredLapId();
+  if (preferredLapId) {
+    activateLap(preferredLapId);
+  } else if (lastLoadedId) {
     activateLap(lastLoadedId);
   } else if (!telemetryState.laps.length) {
     clearLaps();
   } else {
     renderLapList();
   }
+  persistLapSession();
 
   errors.forEach(({ fileName, error }) =>
     showError(`Failed to load ${fileName}. Check console for details.`, error)
@@ -141,6 +167,7 @@ function activateLap(lapId) {
   const lap = telemetryState.laps.find((l) => l.id === lapId);
   if (!lap) return;
   setActiveLapId(lapId);
+  rememberActiveLap(lap);
   uiState.cursorDistance = null;
   telemetryState.lapVisibility.add(lapId);
   const savedWindow = uiState.savedWindows.get(lap.id);
@@ -166,6 +193,7 @@ function handleVisibilityChange(lapId, visible) {
   updateLaneData();
   renderTrackMap(getActiveLap());
   renderLapList();
+  persistLapSession();
 }
 
 function moveLap(lapId, direction) {
@@ -178,6 +206,7 @@ function moveLap(lapId, direction) {
   syncLapColorsToOrder();
   renderLapList();
   updateLaneData();
+  persistLapSession();
 }
 
 function clearLaps() {
@@ -189,6 +218,7 @@ function clearLaps() {
   renderSectorButtons(null);
   renderLapList();
   showMessage('Cleared all laps.', 'success');
+  clearStoredSession();
 }
 
 function persistWindowPreference(lap, window) {
@@ -202,11 +232,17 @@ function persistWindowPreference(lap, window) {
   };
   uiState.persistentWindowRatio = ratio;
   savePreferences({ windowRatio: ratio });
+  const signature = getLapSignature(lap);
+  if (signature) {
+    const lapWindows = { ...(preferences.lapWindows || {}), [signature]: ratio };
+    savePreferences({ lapWindows });
+  }
 }
 
 function applyPersistentWindow(lap) {
-  if (!uiState.persistentWindowRatio) return false;
-  const range = getWindowFromRatio(lap, uiState.persistentWindowRatio);
+  const ratio = getStoredWindowRatio(lap);
+  if (!ratio) return false;
+  const range = getWindowFromRatio(lap, ratio);
   setViewWindow(lap, range.start, range.end);
   return true;
 }
@@ -225,9 +261,13 @@ function loadPreferences() {
   if (typeof localStorage === 'undefined') return {};
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    return raw ? JSON.parse(raw) : {};
+    const parsed = raw ? JSON.parse(raw) : {};
+    if (!parsed.lapWindows || typeof parsed.lapWindows !== 'object') {
+      parsed.lapWindows = {};
+    }
+    return parsed;
   } catch {
-    return {};
+    return { lapWindows: {} };
   }
 }
 
@@ -235,4 +275,142 @@ function savePreferences(next) {
   if (typeof localStorage === 'undefined') return;
   preferences = { ...preferences, ...next };
   localStorage.setItem(PREFS_KEY, JSON.stringify(preferences));
+}
+
+function rememberActiveLap(lap) {
+  const signature = getLapSignature(lap);
+  if (!signature) return;
+  savePreferences({ activeLapSignature: signature });
+}
+
+function findPreferredLapId() {
+  if (!preferences.activeLapSignature) return null;
+  const match = telemetryState.laps.find(
+    (lap) => getLapSignature(lap) === preferences.activeLapSignature
+  );
+  return match?.id ?? null;
+}
+
+function getStoredWindowRatio(lap) {
+  const signature = getLapSignature(lap);
+  if (signature && preferences.lapWindows?.[signature]) {
+    uiState.persistentWindowRatio = preferences.lapWindows[signature];
+    return preferences.lapWindows[signature];
+  }
+  const fallback = preferences.windowRatio || uiState.persistentWindowRatio || null;
+  if (fallback) {
+    uiState.persistentWindowRatio = fallback;
+  }
+  return fallback;
+}
+
+function getLapSignature(lap) {
+  if (!lap) return null;
+  const track = lap.metadata.track || 'unknown-track';
+  const car = lap.metadata.car || 'unknown-car';
+  const lapTime = lap.metadata.lapTime ?? lap.samples.length;
+  return `${lap.name}|${track}|${car}|${lapTime}`;
+}
+
+function applyTheme(theme, persist = true) {
+  const resolved = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = resolved;
+  if (persist) {
+    savePreferences({ theme: resolved });
+  }
+  updateThemeToggle(resolved);
+}
+
+function updateThemeToggle(theme) {
+  if (!elements.themeToggle) return;
+  elements.themeToggle.textContent = theme === 'dark' ? 'Dark mode' : 'Light mode';
+}
+
+function persistLapSession() {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const payload = {
+      laps: telemetryState.laps.map(serializeLap),
+      lapOrder: [...telemetryState.lapOrder],
+      visibility: Array.from(telemetryState.lapVisibility),
+      savedWindows: Array.from(uiState.savedWindows.entries())
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(payload));
+  } catch (error) {
+    console.warn('Failed to persist lap session', error);
+  }
+}
+
+function restoreLapSession() {
+  if (typeof localStorage === 'undefined') return false;
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return false;
+    const payload = JSON.parse(raw);
+    if (!payload?.laps?.length) return false;
+    telemetryState.laps = payload.laps.map(deserializeLap);
+    telemetryState.lapOrder = Array.isArray(payload.lapOrder) && payload.lapOrder.length
+      ? payload.lapOrder.filter((lapId) => telemetryState.laps.some((lap) => lap.id === lapId))
+      : telemetryState.laps.map((lap) => lap.id);
+    telemetryState.lapVisibility = new Set(
+      Array.isArray(payload.visibility) && payload.visibility.length
+        ? payload.visibility.filter((lapId) =>
+            telemetryState.laps.some((lap) => lap.id === lapId)
+          )
+        : telemetryState.lapOrder
+    );
+    uiState.savedWindows.clear();
+    if (Array.isArray(payload.savedWindows)) {
+      payload.savedWindows.forEach(([lapId, window]) => {
+        if (window && typeof window.start === 'number' && typeof window.end === 'number') {
+          uiState.savedWindows.set(lapId, window);
+        }
+      });
+    }
+    syncLapColorsToOrder();
+    return telemetryState.laps.length > 0;
+  } catch (error) {
+    console.warn('Failed to restore lap session', error);
+    return false;
+  }
+}
+
+function clearStoredSession() {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function serializeLap(lap) {
+  return {
+    id: lap.id,
+    name: lap.name,
+    metadata: { ...lap.metadata },
+    sectors: Array.isArray(lap.sectors)
+      ? lap.sectors.map((sector) => ({ ...sector }))
+      : [],
+    samples: lap.samples.map((sample) => ({
+      distance: sample.distance,
+      time: sample.time,
+      throttle: sample.throttle,
+      brake: sample.brake,
+      speed: sample.speed,
+      steer: sample.steer,
+      gear: sample.gear,
+      rpm: sample.rpm,
+      x: sample.x,
+      y: sample.y,
+      z: sample.z,
+      sector: sample.sector
+    }))
+  };
+}
+
+function deserializeLap(raw) {
+  return {
+    id: raw.id,
+    name: raw.name,
+    metadata: raw.metadata || {},
+    sectors: raw.sectors || [],
+    samples: Array.isArray(raw.samples) ? raw.samples : []
+  };
 }
