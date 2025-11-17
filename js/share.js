@@ -15,7 +15,6 @@ export async function buildShareLink(lap, windowRange) {
   const encodedSamples = encodeSamples(downsampled);
   console.log('[Share] Encoded byte length:', encodedSamples.length);
   const { bytes: compressedBytes, compressed } = await compressBytes(encodedSamples);
-  console.log('[Share] Compressed:', compressed, 'Length:', compressedBytes.length);
   const payload = {
     v: 1,
     count: downsampled.length,
@@ -30,19 +29,31 @@ export async function buildShareLink(lap, windowRange) {
     data: base64urlEncode(compressedBytes)
   };
   const json = JSON.stringify(payload);
-  const encodedPayload = base64urlEncode(new TextEncoder().encode(json));
+  const encodedPayload = base64urlEncode(stringToBytes(json));
   const url = getBaseUrl();
   if (encodedPayload.length > 8000) {
     url.searchParams.delete('share');
-    const existing = url.hash.startsWith('#') ? url.hash.slice(1) : '';
-    const params = new URLSearchParams(existing);
-    params.set('share', encodedPayload);
-    url.hash = `#${params.toString()}`;
+    const hashParams = new URLSearchParams(
+      url.hash.startsWith('#') ? url.hash.slice(1) : ''
+    );
+    const chunkSize = 7500;
+    const chunks = [];
+    for (let i = 0; i < encodedPayload.length; i += chunkSize) {
+      chunks.push(encodedPayload.slice(i, i + chunkSize));
+    }
+    hashParams.set('shareParts', String(chunks.length));
+    chunks.forEach((chunk, index) => hashParams.set(`share${index}`, chunk));
+    url.hash = `#${hashParams.toString()}`;
   } else {
     url.searchParams.set('share', encodedPayload);
-    const params = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : '');
-    params.delete('share');
-    url.hash = params.toString() ? `#${params.toString()}` : '';
+    const hashParams = new URLSearchParams(
+      url.hash.startsWith('#') ? url.hash.slice(1) : ''
+    );
+    hashParams.delete('shareParts');
+    Array.from(hashParams.keys())
+      .filter((key) => key.startsWith('share'))
+      .forEach((key) => hashParams.delete(key));
+    url.hash = hashParams.toString() ? `#${hashParams.toString()}` : '';
   }
   return url.toString();
 }
@@ -283,6 +294,28 @@ function base64urlDecode(value) {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
+}
+
+function stringToBytes(value) {
+  if (typeof TextEncoder !== 'undefined') {
+    return new TextEncoder().encode(value);
+  }
+  // Fallback for very old browsers: UTF-8 encode manually.
+  const bytes = [];
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code < 0x80) {
+      bytes.push(code);
+    } else if (code < 0x800) {
+      bytes.push(0xc0 | (code >> 6));
+      bytes.push(0x80 | (code & 0x3f));
+    } else {
+      bytes.push(0xe0 | (code >> 12));
+      bytes.push(0x80 | ((code >> 6) & 0x3f));
+      bytes.push(0x80 | (code & 0x3f));
+    }
+  }
+  return Uint8Array.from(bytes);
 }
 
 async function withTimeout(fn, ms) {

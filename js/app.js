@@ -344,6 +344,17 @@ function updateThemeToggle(theme) {
   elements.themeToggle.textContent = theme === 'dark' ? 'Dark mode' : 'Light mode';
 }
 
+function isSafariBrowser() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  return (
+    /Safari/.test(ua) &&
+    !/Chrome/.test(ua) &&
+    !/Chromium/.test(ua) &&
+    !/Edg/.test(ua)
+  );
+}
+
 function persistLapSession() {
   if (typeof localStorage === 'undefined') return;
   try {
@@ -443,6 +454,10 @@ async function shareActiveLap() {
     showMessage('Load a lap before sharing.', 'warning');
     return;
   }
+  if (isSafariBrowser()) {
+    showMessage('Sharing is only supported in Chromium-based browsers (Chrome, Edge, Brave).', 'warning');
+    return;
+  }
   try {
     const windowRange = uiState.savedWindows.get(lap.id) ?? uiState.viewWindow ?? null;
     showMessage('Preparing share link...', 'info');
@@ -481,8 +496,24 @@ async function copyToClipboard(text) {
 
 async function handleSharedLapParam() {
   const params = new URLSearchParams(window.location.search);
-  const hashParams = new URLSearchParams(window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '');
-  const payload = params.get('share') || hashParams.get('share');
+  const hashParams = new URLSearchParams(
+    window.location.hash.startsWith('#') ? window.location.hash.slice(1) : ''
+  );
+  let payload = params.get('share') || hashParams.get('share');
+  if (!payload) {
+    const partCount = Number(hashParams.get('shareParts'));
+    if (Number.isInteger(partCount) && partCount > 0) {
+      let combined = '';
+      for (let i = 0; i < partCount; i++) {
+        const chunk = hashParams.get(`share${i}`);
+        if (!chunk) break;
+        combined += chunk;
+      }
+      if (combined.length) {
+        payload = combined;
+      }
+    }
+  }
   if (!payload) return;
   try {
     const { lap, window } = await importSharedLap(payload);
@@ -501,6 +532,10 @@ async function handleSharedLapParam() {
   } finally {
     params.delete('share');
     hashParams.delete('share');
+    hashParams.delete('shareParts');
+    Array.from(hashParams.keys())
+      .filter((key) => key.startsWith('share'))
+      .forEach((key) => hashParams.delete(key));
     const newQuery = params.toString();
     const newHash = hashParams.toString();
     const newUrl = `${window.location.pathname}${newQuery ? `?${newQuery}` : ''}${newHash ? `#${newHash}` : ''}`;
