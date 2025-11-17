@@ -445,16 +445,37 @@ async function shareActiveLap() {
   }
   try {
     const windowRange = uiState.savedWindows.get(lap.id) ?? uiState.viewWindow ?? null;
+    showMessage('Preparing share link...', 'info');
+    console.groupCollapsed('ShareLap');
+    console.log('Active lap:', lap.name, lap.signature);
+    if (windowRange) {
+      console.log('Window range:', windowRange);
+    }
     const link = await buildShareLink(lap, windowRange);
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(link);
+    console.log('Generated link length:', link.length);
+    const copied = await copyToClipboard(link);
+    if (copied) {
       showMessage('Share link copied to clipboard.', 'success');
+      console.log('Link copied to clipboard');
     } else {
+      showMessage('Copy the share link below.', 'warning');
       prompt('Copy this share link', link);
     }
+    console.groupEnd();
   } catch (error) {
     console.error(error);
     showError('Failed to build share link.', error);
+    console.groupEnd?.();
+  }
+}
+
+async function copyToClipboard(text) {
+  if (!navigator.clipboard?.writeText) return false;
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
   }
 }
 

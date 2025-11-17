@@ -3,7 +3,7 @@ import { ensureLapSignature } from './signature.js';
 const MAX_SHARED_SAMPLES = 1200;
 const DISTANCE_SCALE = 100; // centimeters
 const TIME_SCALE = 1000; // milliseconds
-const COORD_SCALE = 100; // centimeters
+const COORD_SCALE = 1000; // millimeters
 const SPEED_SCALE = 10; // 0.1 km/h increments
 const RPM_SCALE = 10; // 10 rpm increments
 
@@ -11,11 +11,15 @@ export async function buildShareLink(lap, windowRange) {
   if (!lap) throw new Error('No lap to share.');
   ensureLapSignature(lap);
   const downsampled = downsampleSamples(lap.samples);
+  console.log('[Share] Original samples:', lap.samples.length, 'Downsampled:', downsampled.length);
   const encodedSamples = encodeSamples(downsampled);
-  const compressed = await compressBytes(encodedSamples);
+  console.log('[Share] Encoded byte length:', encodedSamples.length);
+  const { bytes: compressedBytes, compressed } = await compressBytes(encodedSamples);
+  console.log('[Share] Compressed:', compressed, 'Length:', compressedBytes.length);
   const payload = {
     v: 1,
     count: downsampled.length,
+    compressed,
     window: windowRange || null,
     meta: {
       name: lap.name,
@@ -23,7 +27,7 @@ export async function buildShareLink(lap, windowRange) {
       metadata: lap.metadata,
       sectors: lap.sectors
     },
-    data: base64urlEncode(compressed)
+    data: base64urlEncode(compressedBytes)
   };
   const json = JSON.stringify(payload);
   const encodedPayload = base64urlEncode(new TextEncoder().encode(json));
@@ -36,11 +40,13 @@ export async function importSharedLap(encoded) {
   if (!encoded) throw new Error('Empty share payload.');
   const jsonBytes = base64urlDecode(encoded);
   const payload = JSON.parse(new TextDecoder().decode(jsonBytes));
+  console.log('[Share] Import payload version:', payload?.v, 'count:', payload?.count);
   if (!payload?.data || !payload?.count) {
     throw new Error('Malformed share payload.');
   }
   const compressedBytes = base64urlDecode(payload.data);
-  const sampleBytes = await decompressBytes(compressedBytes);
+  const sampleBytes =
+    payload.compressed === false ? compressedBytes : await decompressBytes(compressedBytes);
   const samples = decodeSamples(sampleBytes, payload.count);
   const lap = {
     id: `shared-${crypto.randomUUID?.() ?? Date.now()}`,
@@ -81,7 +87,8 @@ function quantizeSample(sample) {
     gear: clamp(Math.round(sample.gear ?? 0), -32, 31),
     rpm: clamp(Math.round((sample.rpm ?? 0) / RPM_SCALE), 0, 20000),
     x: Math.round((sample.x ?? 0) * COORD_SCALE),
-    y: Math.round((sample.y ?? 0) * COORD_SCALE)
+    y: Math.round((sample.y ?? 0) * COORD_SCALE),
+    z: Math.round((sample.z ?? 0) * COORD_SCALE)
   };
 }
 
@@ -91,6 +98,7 @@ function encodeSamples(samples) {
   let prevTime = 0;
   let prevX = 0;
   let prevY = 0;
+  let prevZ = 0;
   samples.forEach((sample) => {
     const q = quantizeSample(sample);
     writeSignedVarint(bytes, q.distance - prevDistance);
@@ -107,6 +115,8 @@ function encodeSamples(samples) {
     prevX = q.x;
     writeSignedVarint(bytes, q.y - prevY);
     prevY = q.y;
+    writeSignedVarint(bytes, q.z - prevZ);
+    prevZ = q.z;
   });
   return Uint8Array.from(bytes);
 }
@@ -118,6 +128,7 @@ function decodeSamples(bytes, count) {
   let prevTime = 0;
   let prevX = 0;
   let prevY = 0;
+  let prevZ = 0;
   for (let i = 0; i < count; i++) {
     prevDistance += readSignedVarint(bytes, state);
     prevTime += readSignedVarint(bytes, state);
@@ -129,6 +140,7 @@ function decodeSamples(bytes, count) {
     const rpm = readUnsignedVarint(bytes, state);
     prevX += readSignedVarint(bytes, state);
     prevY += readSignedVarint(bytes, state);
+    prevZ += readSignedVarint(bytes, state);
     samples.push({
       distance: prevDistance / DISTANCE_SCALE,
       time: prevTime / TIME_SCALE,
@@ -139,22 +151,23 @@ function decodeSamples(bytes, count) {
       gear,
       rpm: rpm * RPM_SCALE,
       x: prevX / COORD_SCALE,
-      y: prevY / COORD_SCALE
+      y: prevY / COORD_SCALE,
+      z: prevZ / COORD_SCALE
     });
   }
   return samples;
 }
 
 async function compressBytes(bytes) {
-  const stream = new CompressionStream('gzip');
-  const writer = stream.writable.getWriter();
-  await writer.write(bytes);
-  await writer.close();
-  const arrayBuffer = await new Response(stream.readable).arrayBuffer();
-  return new Uint8Array(arrayBuffer);
+  // Temporarily skip compression to keep share generation snappy across browsers.
+  return { bytes, compressed: false };
 }
 
 async function decompressBytes(bytes) {
+  if (typeof DecompressionStream === 'undefined') {
+    console.warn('DecompressionStream unavailable; treating bytes as uncompressed.');
+    return bytes;
+  }
   const stream = new DecompressionStream('gzip');
   const writer = stream.writable.getWriter();
   await writer.write(bytes);
