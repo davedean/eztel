@@ -278,6 +278,38 @@
         accent-color: var(--accent);
       }
 
+      .lap-entry .lap-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        margin-left: 0.5rem;
+      }
+
+      .lap-entry .lap-actions button {
+        border: 1px solid var(--border);
+        background: #fff;
+        border-radius: 4px;
+        width: 24px;
+        height: 20px;
+        font-size: 0.65rem;
+        cursor: pointer;
+      }
+
+      .lap-entry .lap-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+        font-size: 0.7rem;
+        color: var(--muted);
+      }
+
+      .lap-entry .lap-chip {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 0.1rem 0.5rem;
+        background: var(--bg);
+      }
+
       .lanes {
         display: flex;
         flex-direction: column;
@@ -553,9 +585,3 @@
     <script type="module" src="js/app.js"></script>
   </body>
 </html>
-.lap-entry .lap-actions { display: flex; flex-direction: column; gap: 0.2rem; margin-left: 0.5rem; }
-.lap-entry .lap-actions button { border: 1px solid var(--border); background: #fff; border-radius:
-4px; width: 24px; height: 20px; font-size: 0.65rem; cursor: pointer; } .lap-entry .lap-chips {
-display: flex; flex-wrap: wrap; gap: 0.25rem; font-size: 0.7rem; color: var(--muted); } .lap-entry
-.lap-chip { border: 1px solid var(--border); border-radius: 999px; padding: 0.1rem 0.5rem;
-background: var(--bg); }
