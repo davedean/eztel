@@ -1,488 +1,504 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LMU Lap Viewer</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      color-scheme: light;
-      --bg: #f6f7fb;
-      --panel-bg: #ffffff;
-      --border: #dfe3eb;
-      --text: #1b1f2b;
-      --muted: #60677a;
-      --accent: #2f5bea;
-      --accent-soft: rgba(47, 91, 234, 0.1);
-      --lane-throttle: #33a02c;
-      --lane-brake: #d62728;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    header {
-      padding: 1rem 2rem;
-      background: var(--panel-bg);
-      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
-      border-bottom: 1px solid var(--border);
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 1.3rem;
-    }
-
-    main {
-      flex: 1;
-      padding: 1.5rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      max-width: 1200px;
-      width: 100%;
-      margin: 0 auto;
-    }
-
-    .panel {
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.25rem;
-      box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03);
-    }
-
-    #dropzone {
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 1rem;
-      text-align: center;
-      color: var(--muted);
-      cursor: pointer;
-      transition: border-color 0.2s ease, background 0.2s ease;
-    }
-
-    #dropzone.dragover {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      color: var(--text);
-    }
-
-    #fileInput {
-      display: none;
-    }
-
-    .status {
-      margin-top: 0.75rem;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-
-    .lap-info h2 {
-      margin: 0 0 0.5rem 0;
-      font-size: 1rem;
-    }
-
-    .lap-meta {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 0.5rem;
-      font-size: 0.9rem;
-    }
-
-    .lap-meta div {
-      background: var(--bg);
-      border-radius: 8px;
-      padding: 0.5rem 0.75rem;
-    }
-
-    .lap-meta .label {
-      display: block;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-      margin-bottom: 0.15rem;
-    }
-
-    .layout {
-      display: grid;
-      grid-template-columns: minmax(260px, 320px) 1fr;
-      gap: 1.25rem;
-    }
-
-    @media (max-width: 1000px) {
-      .layout {
-        grid-template-columns: 1fr;
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LMU Lap Viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7fb;
+        --panel-bg: #ffffff;
+        --border: #dfe3eb;
+        --text: #1b1f2b;
+        --muted: #60677a;
+        --accent: #2f5bea;
+        --accent-soft: rgba(47, 91, 234, 0.1);
+        --lane-throttle: #33a02c;
+        --lane-brake: #d62728;
       }
-    }
 
-    .track-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
+      * {
+        box-sizing: border-box;
+      }
 
-    #trackCanvas {
-      width: 100%;
-      height: 360px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #fff;
-    }
+      body {
+        margin: 0;
+        font-family:
+          'Inter',
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
 
-    .lap-files {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
+      header {
+        padding: 1rem 2rem;
+        background: var(--panel-bg);
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+        border-bottom: 1px solid var(--border);
+      }
 
-    .lap-files header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0;
-      border: none;
-      box-shadow: none;
-      background: none;
-    }
+      header h1 {
+        margin: 0;
+        font-size: 1.3rem;
+      }
 
-    .lap-files h3 {
-      margin: 0;
-      font-size: 1rem;
-    }
+      main {
+        flex: 1;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        max-width: 1200px;
+        width: 100%;
+        margin: 0 auto;
+      }
 
-    .lap-files button.clear {
-      border: none;
-      background: transparent;
-      color: var(--muted);
-      font-size: 0.85rem;
-      cursor: pointer;
-    }
+      .panel {
+        background: var(--panel-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03);
+      }
 
-    .lap-list {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
+      #dropzone {
+        border: 2px dashed var(--border);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        color: var(--muted);
+        cursor: pointer;
+        transition:
+          border-color 0.2s ease,
+          background 0.2s ease;
+      }
 
-    .lap-entry {
-      width: 100%;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--panel-bg);
-      padding: 0.6rem 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-      cursor: pointer;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    }
+      #dropzone.dragover {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        color: var(--text);
+      }
 
-    .lap-entry.active {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--accent-soft);
-    }
+      #fileInput {
+        display: none;
+      }
 
-    .lap-entry .lap-color {
-      width: 12px;
-      height: 12px;
-      border-radius: 999px;
-      flex: none;
-    }
+      .status {
+        margin-top: 0.75rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
 
-    .lap-entry .lap-text {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      font-size: 0.85rem;
-    }
+      .lap-info h2 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1rem;
+      }
 
-    .lap-entry .lap-name {
-      font-weight: 600;
-    }
+      .lap-meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.5rem;
+        font-size: 0.9rem;
+      }
 
-    .lap-entry .lap-meta-line {
-      font-size: 0.75rem;
-      color: var(--muted);
-    }
+      .lap-meta div {
+        background: var(--bg);
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+      }
 
-    .lap-entry .lap-visibility {
-      margin-left: auto;
-      font-size: 0.75rem;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-    }
+      .lap-meta .label {
+        display: block;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 0.15rem;
+      }
 
-    .lap-entry .lap-visibility input {
-      accent-color: var(--accent);
-    }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(260px, 320px) 1fr;
+        gap: 1.25rem;
+      }
 
-    .lanes {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
+      @media (max-width: 1000px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
 
-    .lane {
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.75rem 1rem 0.5rem;
-      background: #fff;
-      min-height: 180px;
-    }
+      .track-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
 
-    .lane-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 0.5rem;
-    }
+      #trackCanvas {
+        width: 100%;
+        height: 360px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+      }
 
-    .lane-title {
-      font-weight: 600;
-    }
+      .lap-files {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
 
-    .lane-hint {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
+      .lap-files header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+        background: none;
+      }
 
-    .lane-canvas {
-      position: relative;
-      height: 140px;
-    }
+      .lap-files h3 {
+        margin: 0;
+        font-size: 1rem;
+      }
 
-    .lane-canvas canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
+      .lap-files button.clear {
+        border: none;
+        background: transparent;
+        color: var(--muted);
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
 
-    .lane-selection {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      background: rgba(47, 91, 234, 0.12);
-      border-left: 2px solid var(--accent);
-      border-right: 2px solid var(--accent);
-      pointer-events: none;
-      opacity: 0;
-    }
+      .lap-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
 
-    .placeholder {
-      border: 1px dashed var(--border);
-      border-radius: 12px;
-      padding: 1rem;
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.9rem;
-    }
+      .lap-entry {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--panel-bg);
+        padding: 0.6rem 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        cursor: pointer;
+        transition:
+          border-color 0.15s ease,
+          box-shadow 0.15s ease;
+      }
 
-    .sector-bar {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
+      .lap-entry.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px var(--accent-soft);
+      }
 
-    .sector-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-    }
+      .lap-entry .lap-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        flex: none;
+      }
 
-    .sector-button {
-      border: 1px solid var(--border);
-      background: #fff;
-      padding: 0.35rem 0.85rem;
-      border-radius: 999px;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: background 0.2s ease, border-color 0.2s ease;
-    }
+      .lap-entry .lap-text {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        font-size: 0.85rem;
+      }
 
-    .sector-button.active {
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--accent-soft);
-    }
+      .lap-entry .lap-name {
+        font-weight: 600;
+      }
 
-    .sector-placeholder {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
+      .lap-entry .lap-meta-line {
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
 
-    .progress-track {
-      width: 100%;
-      height: 32px;
-      border-radius: 12px;
-      background: #e4e8f2;
-      position: relative;
-      overflow: hidden;
-      border: 1px solid var(--border);
-      cursor: crosshair;
-    }
+      .lap-entry .lap-visibility {
+        margin-left: auto;
+        font-size: 0.75rem;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
 
-    .progress-window {
-      position: absolute;
-      top: 6px;
-      bottom: 6px;
-      border-radius: 8px;
-      background: var(--accent-soft);
-      border: 1px solid var(--accent);
-      left: 0;
-      width: 100%;
-    }
+      .lap-entry .lap-visibility input {
+        accent-color: var(--accent);
+      }
 
-    .progress-window::before,
-    .progress-window::after {
-      content: '';
-      position: absolute;
-      top: -4px;
-      bottom: -4px;
-      width: 4px;
-      background: var(--accent);
-      border-radius: 2px;
-    }
+      .lanes {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
 
-    .progress-window::before {
-      left: -2px;
-    }
+      .lane {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 0.75rem 1rem 0.5rem;
+        background: #fff;
+        min-height: 180px;
+      }
 
-    .progress-window::after {
-      right: -2px;
-    }
+      .lane-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 0.5rem;
+      }
 
-    .progress-cursor {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--accent);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.1s ease;
-    }
+      .lane-title {
+        font-weight: 600;
+      }
 
-    footer {
-      text-align: center;
-      padding: 1rem;
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>LMU Lap Viewer</h1>
-  </header>
-  <main>
-    <section class="panel">
-      <div id="dropzone">
-        <p><strong>Drop LMU lap file</strong> or click to browse. Files stay in your browser.</p>
-        <p class="status" id="status">No lap loaded yet.</p>
-      </div>
-      <input type="file" id="fileInput" accept=".csv,.txt" />
-    </section>
+      .lane-hint {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
 
-    <section class="panel lap-info">
-      <h2>Lap overview</h2>
-      <div class="lap-meta">
-        <div>
-          <span class="label">Track</span>
-          <span id="metaTrack">—</span>
+      .lane-canvas {
+        position: relative;
+        height: 140px;
+      }
+
+      .lane-canvas canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .lane-selection {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        background: rgba(47, 91, 234, 0.12);
+        border-left: 2px solid var(--accent);
+        border-right: 2px solid var(--accent);
+        pointer-events: none;
+        opacity: 0;
+      }
+
+      .placeholder {
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .sector-bar {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .sector-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .sector-button {
+        border: 1px solid var(--border);
+        background: #fff;
+        padding: 0.35rem 0.85rem;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition:
+          background 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      .sector-button.active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .sector-placeholder {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .progress-track {
+        width: 100%;
+        height: 32px;
+        border-radius: 12px;
+        background: #e4e8f2;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        cursor: crosshair;
+      }
+
+      .progress-window {
+        position: absolute;
+        top: 6px;
+        bottom: 6px;
+        border-radius: 8px;
+        background: var(--accent-soft);
+        border: 1px solid var(--accent);
+        left: 0;
+        width: 100%;
+      }
+
+      .progress-window::before,
+      .progress-window::after {
+        content: '';
+        position: absolute;
+        top: -4px;
+        bottom: -4px;
+        width: 4px;
+        background: var(--accent);
+        border-radius: 2px;
+      }
+
+      .progress-window::before {
+        left: -2px;
+      }
+
+      .progress-window::after {
+        right: -2px;
+      }
+
+      .progress-cursor {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--accent);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.1s ease;
+      }
+
+      footer {
+        text-align: center;
+        padding: 1rem;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>LMU Lap Viewer</h1>
+    </header>
+    <main>
+      <section class="panel">
+        <div id="dropzone">
+          <p><strong>Drop LMU lap file</strong> or click to browse. Files stay in your browser.</p>
+          <p class="status" id="status">No lap loaded yet.</p>
         </div>
-        <div>
-          <span class="label">Car</span>
-          <span id="metaCar">—</span>
-        </div>
-        <div>
-          <span class="label">Driver</span>
-          <span id="metaDriver">—</span>
-        </div>
-        <div>
-          <span class="label">Lap time</span>
-          <span id="metaLapTime">—</span>
-        </div>
-        <div>
-          <span class="label">Samples</span>
-          <span id="metaSamples">—</span>
-        </div>
-      </div>
-    </section>
+        <input type="file" id="fileInput" accept=".csv,.txt" />
+      </section>
 
-    <section class="panel lap-files">
-      <header>
-        <h3>Loaded laps</h3>
-        <button type="button" class="clear" id="clearLaps">Clear all</button>
-      </header>
-      <ul class="lap-list" id="lapList">
-        <li class="status">No laps loaded yet.</li>
-      </ul>
-    </section>
-
-    <section class="layout">
-      <div class="track-panel">
-        <div>
-          <h3>Track map</h3>
-          <canvas id="trackCanvas" width="320" height="360"></canvas>
-        </div>
-      </div>
-      <div class="lanes">
-        <div class="lane">
-          <div class="lane-header">
-            <span class="lane-title">Throttle</span>
-            <span class="lane-hint">% vs distance</span>
+      <section class="panel lap-info">
+        <h2>Lap overview</h2>
+        <div class="lap-meta">
+          <div>
+            <span class="label">Track</span>
+            <span id="metaTrack">—</span>
           </div>
-          <div class="lane-canvas">
-            <canvas id="throttleLane"></canvas>
+          <div>
+            <span class="label">Car</span>
+            <span id="metaCar">—</span>
+          </div>
+          <div>
+            <span class="label">Driver</span>
+            <span id="metaDriver">—</span>
+          </div>
+          <div>
+            <span class="label">Lap time</span>
+            <span id="metaLapTime">—</span>
+          </div>
+          <div>
+            <span class="label">Samples</span>
+            <span id="metaSamples">—</span>
           </div>
         </div>
-        <div class="lane">
-          <div class="lane-header">
-            <span class="lane-title">Brake</span>
-            <span class="lane-hint">% vs distance</span>
-          </div>
-          <div class="lane-canvas">
-            <canvas id="brakeLane"></canvas>
-          </div>
-        </div>
-        <div class="placeholder">Speed, Gear/RPM, and Steering lanes will appear here once throttle &amp; brake are finalised.</div>
-      </div>
-    </section>
+      </section>
 
-    <section class="panel sector-bar">
-      <div class="sector-buttons" id="sectorButtons"></div>
-      <div class="progress-track">
-        <div class="progress-window" id="progressWindow"></div>
-      </div>
-    </section>
-  </main>
-  <footer>
-    Pure client-side prototype. Data never leaves your browser.
-  </footer>
+      <section class="panel lap-files">
+        <header>
+          <h3>Loaded laps</h3>
+          <button type="button" class="clear" id="clearLaps">Clear all</button>
+        </header>
+        <ul class="lap-list" id="lapList">
+          <li class="status">No laps loaded yet.</li>
+        </ul>
+      </section>
+
+      <section class="layout">
+        <div class="track-panel">
+          <div>
+            <h3>Track map</h3>
+            <canvas id="trackCanvas" width="320" height="360"></canvas>
+          </div>
+        </div>
+        <div class="lanes">
+          <div class="lane">
+            <div class="lane-header">
+              <span class="lane-title">Throttle</span>
+              <span class="lane-hint">% vs distance</span>
+            </div>
+            <div class="lane-canvas">
+              <canvas id="throttleLane"></canvas>
+            </div>
+          </div>
+          <div class="lane">
+            <div class="lane-header">
+              <span class="lane-title">Brake</span>
+              <span class="lane-hint">% vs distance</span>
+            </div>
+            <div class="lane-canvas">
+              <canvas id="brakeLane"></canvas>
+            </div>
+          </div>
+          <div class="placeholder">
+            Speed, Gear/RPM, and Steering lanes will appear here once throttle &amp; brake are
+            finalised.
+          </div>
+        </div>
+      </section>
+
+      <section class="panel sector-bar">
+        <div class="sector-buttons" id="sectorButtons"></div>
+        <div class="progress-track">
+          <div class="progress-window" id="progressWindow"></div>
+        </div>
+      </section>
+    </main>
+    <footer>Pure client-side prototype. Data never leaves your browser.</footer>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
     <script type="module" src="js/app.js"></script>
-</body>
+  </body>
 </html>

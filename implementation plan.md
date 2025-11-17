@@ -6,33 +6,33 @@ Provide a concrete set of steps an LLM (or engineer) can follow to deliver the f
 
 ## Primary deliverable
 
-* A self-contained static site (initially `index.html`, optionally split into `app.js` / `styles.css`) that:
-  * Loads lap files via `<input type="file">` and drag/drop. MVP supports one lap at a time; architecture anticipates multi-lap selection later.
-  * Parses CSV/semicolon Telemetry Tool exports into `Lap` + `LapSample` objects and captures metadata (track, car) for display.
-  * Maintains in-browser state for lap metadata, telemetry arrays, view window, and per-lane display settings.
-  * Presents a light-themed Garage-61-inspired layout: track map panel on the left; stacked lanes on the right. MVP renders throttle and brake lanes fully, while other lane placeholders remain ready for future data.
+- A self-contained static site (initially `index.html`, optionally split into `app.js` / `styles.css`) that:
+  - Loads lap files via `<input type="file">` and drag/drop. MVP supports one lap at a time; architecture anticipates multi-lap selection later.
+  - Parses CSV/semicolon Telemetry Tool exports into `Lap` + `LapSample` objects and captures metadata (track, car) for display.
+  - Maintains in-browser state for lap metadata, telemetry arrays, view window, and per-lane display settings.
+  - Presents a light-themed Garage-61-inspired layout: track map panel on the left; stacked lanes on the right. MVP renders throttle and brake lanes fully, while other lane placeholders remain ready for future data.
 
 ## Telemetry sample insights (from `bahrain_international_circuit_P_112.993_toyota_gr010.csv`)
 
-* Files include several short metadata sections before the main telemetry table:
-  * `player,...` and `Game,...` rows describe driver, sim, session, and best sectors.
-  * `TrackID ...` and setup rows (wings, tyre pressures, etc.) provide car/track/environment info.
-* The telemetry header row begins with `LapDistance [m],TotalDistance [m],LapTime [s],...`.
-* Key channel names and units to support immediately:
-  * Distance/time: `LapDistance [m]`, `LapTime [s]`, `TotalDistance [m]`.
-  * Speed: `Speed [km/h]`.
-  * Driver inputs: `ThrottlePercentage [%]`, `BrakePercentage [%]`, `Steer [%]`, `Clutch [%]`.
-  * Additional useful channels: `Gear [int]`, `EngineRevs [rpm]`, world position `X/Y/Z [m]`, tyre/brake temps, wheel speeds.
-* Metadata rows already expose lap time, track length, tyre compound, weather, etc. Capture these for display in the UI.
+- Files include several short metadata sections before the main telemetry table:
+  - `player,...` and `Game,...` rows describe driver, sim, session, and best sectors.
+  - `TrackID ...` and setup rows (wings, tyre pressures, etc.) provide car/track/environment info.
+- The telemetry header row begins with `LapDistance [m],TotalDistance [m],LapTime [s],...`.
+- Key channel names and units to support immediately:
+  - Distance/time: `LapDistance [m]`, `LapTime [s]`, `TotalDistance [m]`.
+  - Speed: `Speed [km/h]`.
+  - Driver inputs: `ThrottlePercentage [%]`, `BrakePercentage [%]`, `Steer [%]`, `Clutch [%]`.
+  - Additional useful channels: `Gear [int]`, `EngineRevs [rpm]`, world position `X/Y/Z [m]`, tyre/brake temps, wheel speeds.
+- Metadata rows already expose lap time, track length, tyre compound, weather, etc. Capture these for display in the UI.
 
 ## Garage 61 analysis reference (`g61-view.jpg`)
 
-* Layout: track map panel on the left, five stacked telemetry lanes on the right (speed, throttle, brake, gear+RPM, steering wheel angle), sector strip across the bottom.
-* Multi-lap display: each lane and the map show all loaded laps simultaneously using distinct colours.
-* Sector buttons (S1–S6 in screenshot) snap the view to that lap segment and zoom the telemetry lanes accordingly.
-* Any lane or the sector bar acts as a range selector: drawing a selection zooms all lanes and highlights the corresponding section in both the sector bar and the track map.
-* Desired track-map behaviour: zoom into the highlighted lap section with a margin before/after the selection; show lap paths per colour.
-* MVP simplifications: single lap display, no interactive range selection yet, but layout/components should make it easy to add multi-lap overlays and linked selections later.
+- Layout: track map panel on the left, five stacked telemetry lanes on the right (speed, throttle, brake, gear+RPM, steering wheel angle), sector strip across the bottom.
+- Multi-lap display: each lane and the map show all loaded laps simultaneously using distinct colours.
+- Sector buttons (S1–S6 in screenshot) snap the view to that lap segment and zoom the telemetry lanes accordingly.
+- Any lane or the sector bar acts as a range selector: drawing a selection zooms all lanes and highlights the corresponding section in both the sector bar and the track map.
+- Desired track-map behaviour: zoom into the highlighted lap section with a margin before/after the selection; show lap paths per colour.
+- MVP simplifications: single lap display, no interactive range selection yet, but layout/components should make it easy to add multi-lap overlays and linked selections later.
 
 ## Clarifications received
 
@@ -85,14 +85,14 @@ Record answers in this file (or a follow-up) before assigning to developers.
 **Status:** ✅ Completed – `parser.js` normalises LMU CSV exports, maps headers, builds Lap/LapSample objects, and raises descriptive errors.
 
 1. Implement `parseLapFile(rawText, fileName)`:
-   * Detect delimiter (`;` vs `,`); the provided sample uses commas but includes decimal periods and bracketed units in headers.
-   * Split into rows; strip UTF-8 BOM; detect and skip the initial metadata blocks (`player,...`, `Game,...`, `TrackID...`, `FWing,...`) before reaching the telemetry header row starting with `LapDistance [m],TotalDistance [m],...`.
-   * Record metadata key/value pairs from the pre-header sections (e.g., track, car, lap time, tyre compound) for display.
+   - Detect delimiter (`;` vs `,`); the provided sample uses commas but includes decimal periods and bracketed units in headers.
+   - Split into rows; strip UTF-8 BOM; detect and skip the initial metadata blocks (`player,...`, `Game,...`, `TrackID...`, `FWing,...`) before reaching the telemetry header row starting with `LapDistance [m],TotalDistance [m],...`.
+   - Record metadata key/value pairs from the pre-header sections (e.g., track, car, lap time, tyre compound) for display.
 2. Extract telemetry header columns (including unit annotations) and normalise for lookup (e.g., `lapdistance_m`, `speed_kmh`).
 3. Implement `guessColumnIndices(headerCols)` with explicit mappings for observed names: `LapDistance [m]`, `LapTime [s]`, `Speed [km/h]`, `ThrottlePercentage [%]`, `BrakePercentage [%]`, `Steer [%]`, `Gear [int]`, `EngineRevs [rpm]`, plus placeholders for `X [m]`, `Y [m]`, etc. Provide fallbacks for other sims that might omit units.
 4. Iterate telemetry rows:
-   * Convert required columns to numbers; skip rows lacking `LapDistance` or `LapTime`.
-   * Build `LapSample` entries; default missing optional channels to `null`.
+   - Convert required columns to numbers; skip rows lacking `LapDistance` or `LapTime`.
+   - Build `LapSample` entries; default missing optional channels to `null`.
 5. Sort samples by distance if not strictly increasing.
 6. Compute lap metadata (sample count, approximate lap length from `Tracklen [m]` or last `LapDistance`, min/max speed) for UI display.
 7. Return a `Lap` object with unique ID (use incremental counter or timestamp) and attach metadata captured earlier.
@@ -158,12 +158,12 @@ Record answers in this file (or a follow-up) before assigning to developers.
 
 ## Stretch items (post-MVP)
 
-* Multi-lap overlays: allow selecting multiple laps (from same or different files) and render them simultaneously in each lane and on the track map with distinct colours/legends.
-* Range selection / zoom sync: drag across any lane or the sector bar to define a custom window; pan/zoom updates all lanes and track map with highlighted region (mirroring Garage 61’s behaviour).
-* Delta-time trace: optional extra lane plotting reference–comparison delta when multi-lap mode is enabled.
-* Track-map zooming: smoothly zoom to highlighted range with padding on either side; consider minimap/overview for context.
-* Per-sim column presets: maintain JSON mapping of known header variants (ACC, iRacing, LMU, etc.) and allow manual override if auto-detect fails.
-* Local storage: save last selected lap, active sectors, and theme preferences for quick reloads.
+- Multi-lap overlays: allow selecting multiple laps (from same or different files) and render them simultaneously in each lane and on the track map with distinct colours/legends.
+- Range selection / zoom sync: drag across any lane or the sector bar to define a custom window; pan/zoom updates all lanes and track map with highlighted region (mirroring Garage 61’s behaviour).
+- Delta-time trace: optional extra lane plotting reference–comparison delta when multi-lap mode is enabled.
+- Track-map zooming: smoothly zoom to highlighted range with padding on either side; consider minimap/overview for context.
+- Per-sim column presets: maintain JSON mapping of known header variants (ACC, iRacing, LMU, etc.) and allow manual override if auto-detect fails.
+- Local storage: save last selected lap, active sectors, and theme preferences for quick reloads.
 
 ## Quality checks before handoff
 

@@ -45,7 +45,8 @@ export function renderLapList() {
     entry.className = `lap-entry${lap.id === state.activeLapId ? ' active' : ''}`;
     entry.dataset.lapId = lap.id;
     const color = getLapColor(lap.id);
-    const driverLabel = lap.metadata.driver && lap.metadata.driver !== '—' ? lap.metadata.driver : 'Unknown driver';
+    const driverLabel =
+      lap.metadata.driver && lap.metadata.driver !== '—' ? lap.metadata.driver : 'Unknown driver';
     const lapTimeLabel = lap.metadata.lapTime != null ? formatSeconds(lap.metadata.lapTime) : null;
     const metaLine = [driverLabel, lapTimeLabel].filter(Boolean).join(' • ');
     entry.innerHTML = `

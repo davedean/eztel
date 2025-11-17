@@ -23,7 +23,11 @@ export function renderTrackMap(lap) {
     ctx.fillStyle = '#adb3c2';
     ctx.font = '14px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Track coordinates unavailable in this export.', canvas.width / 2, canvas.height / 2);
+    ctx.fillText(
+      'Track coordinates unavailable in this export.',
+      canvas.width / 2,
+      canvas.height / 2
+    );
     state.trackProjectionLapId = null;
     state.trackProjectionPoints = [];
     return;
@@ -34,7 +38,9 @@ export function renderTrackMap(lap) {
   const totalSpan = lap.samples[lap.samples.length - 1].distance - lap.samples[0].distance || 1;
   const windowSpan = windowEnd - windowStart;
   const shouldZoom = windowSpan < totalSpan * 0.98;
-  const windowPoints = shouldZoom ? activePoints.filter((p) => p.distance >= windowStart && p.distance <= windowEnd) : activePoints;
+  const windowPoints = shouldZoom
+    ? activePoints.filter((p) => p.distance >= windowStart && p.distance <= windowEnd)
+    : activePoints;
   const drawingPoints = shouldZoom && windowPoints.length >= 2 ? windowPoints : activePoints;
 
   let minX = Infinity;
@@ -59,8 +65,8 @@ export function renderTrackMap(lap) {
 
   const paddingX = 30;
   const paddingY = 30;
-  const rangeX = (maxX - minX) || 1;
-  const rangeY = (maxY - minY) || 1;
+  const rangeX = maxX - minX || 1;
+  const rangeY = maxY - minY || 1;
   const width = canvas.width - paddingX * 2;
   const height = canvas.height - paddingY * 2;
 
@@ -147,7 +153,8 @@ export function initTrackHover({ setCursorDistance }) {
   if (!elements?.trackCanvas) return;
   elements.trackCanvas.addEventListener('mousemove', (event) => {
     const lap = getActiveLap();
-    if (!lap || state.trackProjectionLapId !== lap.id || !state.trackProjectionPoints.length) return;
+    if (!lap || state.trackProjectionLapId !== lap.id || !state.trackProjectionPoints.length)
+      return;
     const rect = elements.trackCanvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;

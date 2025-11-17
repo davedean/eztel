@@ -1,3 +1,12 @@
+/** @typedef {import('./parser.js').LapSample} LapSample */
+/** @typedef {import('./parser.js').Lap} Lap */
+
+/**
+ * Binary-search lookup for the sample nearest to the requested lap distance.
+ * @param {LapSample[]} samples
+ * @param {number|null} target
+ * @returns {LapSample|null}
+ */
 export function findSampleAtDistance(samples, target) {
   if (!samples.length || target == null) return null;
   let left = 0;
@@ -12,6 +21,11 @@ export function findSampleAtDistance(samples, target) {
   return samples[Math.max(0, Math.min(samples.length - 1, left))];
 }
 
+/**
+ * Produce a concise label for UI legends (prefers driver + track).
+ * @param {Lap} lap
+ * @returns {string}
+ */
 export function formatLapLabel(lap) {
   return lap.metadata.driver && lap.metadata.driver !== '—'
     ? `${lap.metadata.driver} (${lap.metadata.track})`

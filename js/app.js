@@ -4,7 +4,12 @@ import { state, getActiveLap, setActiveLapId, resetState } from './state.js';
 import { updateMetadata } from './metadata.js';
 import { initCharts, updateLaneData, applyWindowToCharts, refreshCharts } from './charts.js';
 import { renderTrackMap, initTrackHover } from './trackMap.js';
-import { initProgressControls, updateProgressWindow, updateSectorCursor, renderSectorButtons } from './progress.js';
+import {
+  initProgressControls,
+  updateProgressWindow,
+  updateSectorCursor,
+  renderSectorButtons
+} from './progress.js';
 import { initLapListInteractions, renderLapList } from './lapList.js';
 
 initDomElements();
@@ -23,7 +28,9 @@ if (elements.dropzone) {
     event.preventDefault();
     elements.dropzone.classList.add('dragover');
   });
-  elements.dropzone.addEventListener('dragleave', () => elements.dropzone.classList.remove('dragover'));
+  elements.dropzone.addEventListener('dragleave', () =>
+    elements.dropzone.classList.remove('dragover')
+  );
   elements.dropzone.addEventListener('drop', (event) => {
     event.preventDefault();
     elements.dropzone.classList.remove('dragover');

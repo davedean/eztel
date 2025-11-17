@@ -44,6 +44,17 @@ npm test
 
 This executes every file under `tests/` via `node --test`. Extend these specs as you add new parsing rules or state helpers.
 
+## Linting & formatting
+
+ESLint + Prettier keep the ES module graph tidy. After installing dependencies:
+
+```
+npm run lint
+npm run format
+```
+
+`lint` checks `js/` and `tests/` for common mistakes, while `format` applies the shared Prettier config (use `npm run format:check` in CI to verify).
+
 ## Notes & next steps
 
 - Only LMU-formatted Telemetry Tool exports are supported right now.

@@ -1,3 +1,4 @@
+/* global Chart */
 import { state, getActiveLap, getLapColor } from './state.js';
 import { formatLapLabel } from './utils.js';
 
@@ -7,10 +8,7 @@ let setViewWindow = () => {};
 export function initCharts(deps) {
   setCursorDistance = deps.setCursorDistance;
   setViewWindow = deps.setViewWindow;
-  if (!window.Chart) {
-    console.warn('Chart.js not loaded');
-    return;
-  }
+  if (!window.Chart) return;
 
   Chart.register({
     id: 'sharedCursor',
@@ -44,7 +42,9 @@ export function updateLaneData() {
     backgroundColor: 'transparent',
     borderWidth: 2,
     pointRadius: 0,
-    data: lap.samples.filter((s) => s.throttle != null).map((s) => ({ x: s.distance, y: s.throttle }))
+    data: lap.samples
+      .filter((s) => s.throttle != null)
+      .map((s) => ({ x: s.distance, y: s.throttle }))
   }));
   applyWindowToChart(throttleChart);
 
@@ -88,8 +88,17 @@ function ensureChart(key, canvasId) {
       animation: false,
       interaction: { mode: 'nearest', intersect: false },
       scales: {
-        x: { type: 'linear', title: { display: true, text: 'Distance (m)' }, grid: { color: '#eef1f6' } },
-        y: { beginAtZero: true, suggestedMax: 100, title: { display: true, text: '% input' }, grid: { color: '#eef1f6' } }
+        x: {
+          type: 'linear',
+          title: { display: true, text: 'Distance (m)' },
+          grid: { color: '#eef1f6' }
+        },
+        y: {
+          beginAtZero: true,
+          suggestedMax: 100,
+          title: { display: true, text: '% input' },
+          grid: { color: '#eef1f6' }
+        }
       },
       plugins: {
         legend: { display: true, position: 'bottom', labels: { boxWidth: 12 } },
@@ -161,7 +170,11 @@ function ensureChart(key, canvasId) {
       pointerState.end = xValue;
     }
     pointerState.active = false;
-    try { chart.canvas.releasePointerCapture(event.pointerId); } catch (_) {}
+    try {
+      chart.canvas.releasePointerCapture(event.pointerId);
+    } catch {
+      // Ignore release failures – pointer may already be uncaptured.
+    }
     syncLaneSelectionOverlay(chart);
     if (pointerState.start != null && pointerState.end != null) {
       const lap = getActiveLap();

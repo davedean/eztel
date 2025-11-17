@@ -9,7 +9,6 @@ export function initProgressControls(deps) {
   setCursorDistance = deps.setCursorDistance;
 
   if (!elements?.progressTrack || !elements.sectorButtons) {
-    console.warn('Progress controls initialised before DOM was ready.');
     return;
   }
 
@@ -65,7 +64,11 @@ export function initProgressControls(deps) {
     if (!dragState.active) return;
     dragState.endRatio = getProgressRatio(event);
     dragState.active = false;
-    try { elements.progressTrack.releasePointerCapture(event.pointerId); } catch (_) {}
+    try {
+      elements.progressTrack.releasePointerCapture(event.pointerId);
+    } catch {
+      // Ignore release failures since pointer may already be uncaptured.
+    }
     applyDragSelection();
   }
 
@@ -111,7 +114,7 @@ export function updateProgressWindow(lap) {
   }
   const total = lap.metadata.lapLength || lap.samples[lap.samples.length - 1].distance;
   const minDistance = lap.samples[0].distance;
-  const span = (total - minDistance) || total || 1;
+  const span = total - minDistance || total || 1;
   const start = (state.viewWindow?.start ?? minDistance) - minDistance;
   const end = (state.viewWindow?.end ?? total) - minDistance;
   const left = (start / span) * 100;
@@ -130,7 +133,7 @@ export function updateSectorCursor(distance) {
   }
   const minDistance = lap.samples[0].distance;
   const maxDistance = lap.metadata.lapLength || lap.samples[lap.samples.length - 1].distance;
-  const ratio = (distance - minDistance) / ((maxDistance - minDistance) || 1);
+  const ratio = (distance - minDistance) / (maxDistance - minDistance || 1);
   cursor.style.opacity = 1;
   cursor.style.left = `${Math.max(0, Math.min(100, ratio * 100))}%`;
 }
@@ -146,7 +149,8 @@ export function renderSectorButtons(lap) {
     return;
   }
   const startDistance = lap.samples[0]?.distance ?? 0;
-  const endDistance = (lap.metadata.lapLength || lap.samples[lap.samples.length - 1]?.distance) ?? startDistance;
+  const endDistance =
+    (lap.metadata.lapLength || lap.samples[lap.samples.length - 1]?.distance) ?? startDistance;
   const viewStart = state.viewWindow?.start ?? startDistance;
   const viewEnd = state.viewWindow?.end ?? endDistance;
 
@@ -184,5 +188,7 @@ export function renderSectorButtons(lap) {
 
 function isWindowMatch(viewStart, viewEnd, targetStart, targetEnd) {
   const tolerance = Math.max(1, (targetEnd - targetStart) * 0.01);
-  return Math.abs(viewStart - targetStart) <= tolerance && Math.abs(viewEnd - targetEnd) <= tolerance;
+  return (
+    Math.abs(viewStart - targetStart) <= tolerance && Math.abs(viewEnd - targetEnd) <= tolerance
+  );
 }
