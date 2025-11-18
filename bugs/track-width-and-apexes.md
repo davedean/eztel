@@ -1,8 +1,86 @@
 ## Track limits overlay
 
-Right now we only have the car’s centreline (`X/Y` or `X/Z`) so the map can’t draw genuine track limits. LMU’s telemetry export doesn’t include left/right boundary channels, so we need to generate the limits ourselves. Two candidate approaches:
+**Status**: ✅ **IMPLEMENTED** (2025-11-18)
 
-### Option 1 – Manual track-definition assets
+Track limit overlays are now generated from calibration laps using the track map generator tool. The SPA automatically renders track limits beneath telemetry traces when track maps are available.
+
+### Implementation: Calibration laps + admin tool ✅
+
+**Core system implemented**:
+1. ✅ CLI tool (`tools/generateTrackMap.js`) for processing calibration laps
+2. ✅ Drive 2-3 calibration laps at each circuit:
+   - Left-limit lap (required)
+   - Right-limit lap (required)
+   - Center/racing-line lap (optional)
+3. ✅ Export via LMU telemetry logger
+4. ✅ Processing pipeline:
+   - Resample each lap onto a common progress grid (0→1) using cumulative distance
+   - Extract centerline (from center lap or average of left/right)
+   - Compute tangents/normals along centerline
+   - Project left/right laps onto normals to calculate half-widths
+   - Apply circular moving average smoothing (configurable window size)
+   - Generate left/right edge polylines from `centerline ± halfWidth * normal`
+   - Export JSON with centerline, edges, widths, and viewBox
+5. ✅ SPA integration:
+   - Async loader (`js/trackMapLoader.js`) with caching
+   - Automatic rendering in track view beneath telemetry traces
+   - Track limits shown as gray lines, centerline as dashed line
+
+**Future enhancements** (deferred):
+- ⏳ HTML preview tool for QA (overlay showing raw laps vs generated edges)
+- ⏳ Interactive controls to tune smoothing or manually adjust sections
+- ⏳ Apex detection and shading from curvature analysis
+- ⏳ Sector markers on track map
+- ⏳ Multi-lap averaging (>3 calibration laps)
+
+### Storage format (implemented)
+```jsonc
+{
+  "sim": "lmu",
+  "trackId": "algarve_international_circuit",
+  "trackName": "Algarve International Circuit",
+  "version": 1,
+  "generatedAt": "2025-11-18T06:26:27.453Z",
+  "sampleCount": 1024,
+  "centerline": [[x, y], ...],           // 1024 [x, z] coordinate pairs
+  "halfWidthLeft": [8.2, 7.9, ...],      // meters from centerline
+  "halfWidthRight": [7.9, 8.1, ...],     // meters from centerline
+  "leftEdge": [[x, y], ...],             // computed left boundary
+  "rightEdge": [[x, y], ...],            // computed right boundary
+  "viewBox": [-1.1, -0.9, 2.2, 1.8],     // [minX, minY, width, height]
+  "smoothingWindow": 30,                 // settings used
+  "calibrationLaps": {
+    "left": "lap5.csv",
+    "center": null,
+    "right": "lap7.csv"
+  }
+}
+```
+
+**Files**:
+- Track maps stored in `assets/trackmaps/{trackId}.json`
+- Registry at `assets/trackmaps/index.json`
+- First generated map: Algarve International Circuit (140KB, 1024 samples)
+
+**Usage**:
+```bash
+# Generate track map
+node tools/generateTrackMap.js \
+  --input lapdata_custom/calibration/algarve \
+  --output assets/trackmaps/algarve_gp.json \
+  --left lap5.csv --right lap7.csv
+
+# View in SPA
+# Load any lap from Algarve - track limits render automatically
+```
+
+**Documentation**: See `tools/README_TRACK_MAP_GENERATOR.md` for complete workflow guide.
+
+---
+
+### Related Work
+
+**Option 1 – Manual track-definition assets** (not pursued)
 - Build or source per-track SVGs/polylines (e.g., from existing CAD or community data).
 - Store them in the app keyed by `trackId`.
 - Pros: one-time effort if data exists; accurate reference lines.
@@ -39,15 +117,3 @@ Right now we only have the car’s centreline (`X/Y` or `X/Z`) so the map can’
 ```
 
 Once the admin tool exists we can batch-calibrate favoured circuits and check in the blobs so the viewer shows real track limits + apex shading. Until then, no telemetry channel can provide limits automatically.
-
-### Current progress
-- The public viewer already has a robust centreline renderer (`js/trackMap.js`) with pan/zoom, cursor sync, and multi-lap overlays, so once we can emit real track-boundary polylines there’s a canvas ready to display them.
-- A first batch of calibration laps for Algarve lives under `lapdata_custom/calibration/algarve/` (four CSVs). They still need tagging (left/middle/right), but the raw `X/Y/Z` points are available to feed the builder prototype.
-- No admin UI or JSON blob repository exists yet, so the viewer cannot load anything beyond the raw telemetry that ships inside each lap.
-
-### Plan to continue
-1. **Builder shell + ingestion**: create an `admin/track-builder.html` page that reuses `js/parser.js` so we can drag/drop calibration laps, tag them as left/middle/right, and inspect metadata (lap length, sample count, timestamps) before processing.
-2. **Normalisation pipeline**: add a pure module (e.g. `js/trackBuilder/math.js`) that resamples tagged laps onto a uniform 0→1 progress grid, derives tangents/normals, and reports any gaps or spikes so we catch bad calibration data early.
-3. **Width solving & smoothing controls**: expose UI sliders for sample count and smoothing window; project left/right laps onto the middle-lap normals to get half-width arrays, then run circular moving averages or Savitzky‑Golay passes with live feedback.
-4. **Preview canvas for QA**: render raw inputs vs generated edges on the builder page (same canvas stack as the main app) plus a toggle to compare the generated layout inside the existing viewer before writing it to disk. This is the “validate before live” gate.
-5. **Export + storage**: let the tool emit the JSON blob (matching the storage format above) into a `track_layouts/<trackId>.json` folder, record provenance (source laps, smoothing parameters), and teach the main viewer to look up blobs by `sim+trackId` so the limits render automatically whenever a matching lap loads.
