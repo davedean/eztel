@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Track Map Preview Tool</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 32px;
+        background: #05070f;
+        color: #e2e8f0;
+      }
+      h1 {
+        margin-top: 0;
+        font-size: 28px;
+      }
+      p,
+      label {
+        color: #a0aec0;
+      }
+      .card {
+        background: #0d111f;
+        border: 1px solid #1e293b;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: center;
+      }
+      .controls label {
+        display: flex;
+        flex-direction: column;
+        font-size: 14px;
+        gap: 6px;
+      }
+      input[type='number'],
+      select {
+        background: #020617;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 6px 8px;
+        color: #f8fafc;
+      }
+      input[type='file'] {
+        margin-top: 12px;
+      }
+      button {
+        border: none;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+        color: white;
+        font-weight: 600;
+        padding: 10px 18px;
+        cursor: pointer;
+        transition: opacity 0.15s ease;
+      }
+      button[disabled] {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+      th,
+      td {
+        padding: 8px 6px;
+        border-bottom: 1px solid #1e293b;
+        text-align: left;
+        font-size: 14px;
+      }
+      th {
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 12px;
+      }
+      canvas {
+        width: 100%;
+        max-width: 960px;
+        aspect-ratio: 3 / 2;
+        background: #020617;
+        border-radius: 16px;
+        border: 1px solid #1e293b;
+      }
+      pre {
+        background: #020617;
+        border-radius: 12px;
+        padding: 16px;
+        overflow: auto;
+        border: 1px solid #172033;
+        margin: 0;
+      }
+      .status {
+        font-size: 14px;
+        color: #fbbf24;
+        min-height: 24px;
+      }
+      .warning {
+        color: #f87171;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Track Map Preview Tool</h1>
+        <p>
+          Load calibration laps, tag them as left/center/right, and preview the generated track
+          limits before committing JSON assets. Generate the blob directly, download it, or open the
+          main SPA with the preview injected via localStorage.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2>Calibration laps</h2>
+        <p>Select 2–3 CSVs exported from LMU (left/right required, center optional).</p>
+        <input id="fileInput" type="file" accept=".csv" multiple />
+        <div id="trackInfo" style="margin-top: 12px; font-size: 14px; color: #cbd5f5"></div>
+        <div id="fileList" style="margin-top: 16px"></div>
+      </section>
+
+      <section class="card">
+        <div class="controls">
+          <label>
+            Sample count
+            <input id="samplesInput" type="number" min="256" max="4096" step="256" value="1024" />
+          </label>
+          <label>
+            Smoothing window
+            <input id="smoothInput" type="number" min="5" max="200" step="5" value="30" />
+          </label>
+          <button id="generateBtn" disabled>Generate preview</button>
+        </div>
+        <div class="status" id="statusMessage"></div>
+      </section>
+
+      <section class="card">
+        <h2>Preview</h2>
+        <canvas id="previewCanvas" width="960" height="640"></canvas>
+        <div class="actions" style="margin-top: 16px">
+          <button id="downloadBtn" disabled>Download JSON</button>
+          <button id="openSpaBtn" disabled>Open in viewer</button>
+          <span id="previewHint" style="font-size: 13px; color: #94a3b8"
+            >Preview buttons unlock after generating a map.</span
+          >
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Summary</h2>
+        <pre id="summaryOutput">No preview generated yet.</pre>
+      </section>
+    </main>
+
+    <script type="module" src="./trackMapPreview.js"></script>
+  </body>
+</html>

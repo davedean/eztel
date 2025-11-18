@@ -1,5 +1,3 @@
-import { writeFile } from 'fs/promises';
-
 /**
  * Track map JSON exporter.
  *
@@ -127,6 +125,10 @@ export function createTrackMapData({
  */
 export async function exportTrackMap(trackMapData, outputPath) {
   const json = JSON.stringify(trackMapData, null, 2);
+  if (typeof window !== 'undefined') {
+    throw new Error('exportTrackMap is only available in Node.js environments.');
+  }
+  const { writeFile } = await import('fs/promises');
   await writeFile(outputPath, json, 'utf-8');
 }
 

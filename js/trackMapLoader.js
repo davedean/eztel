@@ -4,6 +4,8 @@
  * This module handles loading and caching of track map JSON files.
  */
 
+const PREVIEW_STORAGE_KEY = 'trackMapPreview';
+
 // Cache for loaded track maps
 const trackMapCache = new Map();
 
@@ -31,6 +33,13 @@ export async function loadTrackMap(trackId) {
   // Check cache first
   if (trackMapCache.has(trackId)) {
     return trackMapCache.get(trackId);
+  }
+
+  const previewMap = readPreviewTrackMap(trackId);
+  if (previewMap) {
+    trackMapCache.set(trackId, previewMap);
+    console.info(`Using preview track map for ${trackId} from localStorage.`);
+    return previewMap;
   }
 
   try {
@@ -114,4 +123,23 @@ export async function preloadTrackMaps(trackNames) {
   const uniqueIds = new Set(trackNames.map(normalizeTrackId));
   const promises = Array.from(uniqueIds).map((id) => loadTrackMap(id));
   await Promise.allSettled(promises);
+}
+
+function readPreviewTrackMap(trackId) {
+  if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+    return null;
+  }
+  try {
+    const raw = window.localStorage.getItem(PREVIEW_STORAGE_KEY);
+    if (!raw) return null;
+    const payload = JSON.parse(raw);
+    if (!payload || payload.trackId !== trackId) return null;
+    if (payload.expiresAt && Date.now() > payload.expiresAt) {
+      window.localStorage.removeItem(PREVIEW_STORAGE_KEY);
+      return null;
+    }
+    return payload.trackMap || null;
+  } catch {
+    return null;
+  }
 }

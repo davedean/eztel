@@ -6,6 +6,10 @@ This guide explains how to generate track maps from calibration laps for use in 
 
 Track maps provide visual context by overlaying track limit boundaries beneath telemetry traces in the track view. To generate a track map, you need to drive calibration laps that follow the left and right edges of the track, then process them using the track map generator tool.
 
+### Fast QA via browser preview (new)
+
+Before touching the CLI you can open `admin/track-map-preview.html` in your browser, drag the calibration CSVs in, tag them (left/right/centre), and tune the sample count + smoothing. The preview page plots the raw laps vs the generated edges, lets you download the JSON, or seeds the SPA via localStorage (`Open in viewer`) so you can validate the overlay instantly without copying files into `assets/trackmaps/`.
+
 ## Prerequisites
 
 - LMU (Le Mans Ultimate) with telemetry export enabled
