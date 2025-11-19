@@ -42,7 +42,6 @@ const laneConfigs = [
       scales: {
         y: {
           beginAtZero: true,
-          suggestedMax: 350,
           title: { display: true, text: 'Speed (km/h)' }
         }
       }
@@ -56,7 +55,6 @@ const laneConfigs = [
       scales: {
         y: {
           beginAtZero: true,
-          suggestedMax: 11000,
           title: { display: true, text: 'RPM' },
           grid: { display: false }
         }
