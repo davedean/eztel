@@ -295,6 +295,20 @@ function syncLaneSelectionOverlay(chart) {
     setOverlayRange(chart, null, null);
     return;
   }
+
+  // Hide overlay if viewing the full lap
+  const minDistance = lap.samples[0].distance;
+  const maxDistance = lap.samples[lap.samples.length - 1].distance;
+  const tolerance = Math.max(1, (maxDistance - minDistance) * 0.01);
+  const isFullLap =
+    Math.abs(uiState.viewWindow.start - minDistance) <= tolerance &&
+    Math.abs(uiState.viewWindow.end - maxDistance) <= tolerance;
+
+  if (isFullLap) {
+    setOverlayRange(chart, null, null);
+    return;
+  }
+
   setOverlayRange(chart, uiState.viewWindow.start, uiState.viewWindow.end, 0.2);
 }
 

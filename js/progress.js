@@ -86,9 +86,16 @@ export function initProgressControls(deps) {
     dragState.active = true;
     const ratio = getProgressRatio(event);
     const windowRatios = getWindowRatios(lap);
+
+    // Check if viewing the full lap
+    const isFullLap =
+      Math.abs(windowRatios.start) < 0.01 && Math.abs(windowRatios.width - 1) < 0.01;
+
     const isWithinWindow =
-      (elements.progressWindow && elements.progressWindow.contains(event.target)) ||
-      (ratio >= windowRatios.start && ratio <= windowRatios.start + windowRatios.width);
+      !isFullLap &&
+      ((elements.progressWindow && elements.progressWindow.contains(event.target)) ||
+        (ratio >= windowRatios.start && ratio <= windowRatios.start + windowRatios.width));
+
     if (isWithinWindow) {
       dragState.mode = 'slide';
       dragState.windowStartRatio = windowRatios.start;
@@ -187,6 +194,17 @@ export function updateProgressWindow(lap) {
   const end = (uiState.viewWindow?.end ?? total) - minDistance;
   const left = (start / span) * 100;
   const width = ((end - start) / span) * 100;
+
+  // Hide progress window if viewing the full lap
+  const tolerance = Math.max(0.01, span * 0.01);
+  const isFullLap = Math.abs(start) <= tolerance && Math.abs(end - span) <= tolerance;
+
+  if (isFullLap) {
+    elements.progressWindow.style.left = '0%';
+    elements.progressWindow.style.width = '0%';
+    return;
+  }
+
   elements.progressWindow.style.left = `${Math.max(0, Math.min(100, left))}%`;
   elements.progressWindow.style.width = `${Math.max(0, Math.min(100, width))}%`;
 }
