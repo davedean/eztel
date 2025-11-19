@@ -124,14 +124,22 @@ test('track map bounds are consistent across zoom levels', () => {
   // because we calculate from full track extent with consistent expansion
 
   const tolerance = 0.01;
-  assert.ok(Math.abs(fullBounds.rangeX - bottomBounds.rangeX) < tolerance,
-    `Bottom rangeX (${bottomBounds.rangeX}) should match full (${fullBounds.rangeX})`);
-  assert.ok(Math.abs(fullBounds.rangeY - bottomBounds.rangeY) < tolerance,
-    `Bottom rangeY (${bottomBounds.rangeY}) should match full (${fullBounds.rangeY})`);
-  assert.ok(Math.abs(fullBounds.rangeX - rightBounds.rangeX) < tolerance,
-    `Right rangeX (${rightBounds.rangeX}) should match full (${fullBounds.rangeX})`);
-  assert.ok(Math.abs(fullBounds.rangeY - rightBounds.rangeY) < tolerance,
-    `Right rangeY (${rightBounds.rangeY}) should match full (${fullBounds.rangeY})`);
+  assert.ok(
+    Math.abs(fullBounds.rangeX - bottomBounds.rangeX) < tolerance,
+    `Bottom rangeX (${bottomBounds.rangeX}) should match full (${fullBounds.rangeX})`
+  );
+  assert.ok(
+    Math.abs(fullBounds.rangeY - bottomBounds.rangeY) < tolerance,
+    `Bottom rangeY (${bottomBounds.rangeY}) should match full (${fullBounds.rangeY})`
+  );
+  assert.ok(
+    Math.abs(fullBounds.rangeX - rightBounds.rangeX) < tolerance,
+    `Right rangeX (${rightBounds.rangeX}) should match full (${fullBounds.rangeX})`
+  );
+  assert.ok(
+    Math.abs(fullBounds.rangeY - rightBounds.rangeY) < tolerance,
+    `Right rangeY (${rightBounds.rangeY}) should match full (${fullBounds.rangeY})`
+  );
 });
 
 test('zoomed track sections should maintain aspect ratio', () => {
@@ -151,17 +159,21 @@ test('zoomed track sections should maintain aspect ratio', () => {
 
   // With the fix, aspect ratios should be consistent
   const tolerance = 0.01;
-  assert.ok(Math.abs(fullAspect - bottomAspect) < tolerance,
-    `Bottom aspect ratio (${bottomAspect}) should match full (${fullAspect})`);
-  assert.ok(Math.abs(fullAspect - rightAspect) < tolerance,
-    `Right aspect ratio (${rightAspect}) should match full (${fullAspect})`);
+  assert.ok(
+    Math.abs(fullAspect - bottomAspect) < tolerance,
+    `Bottom aspect ratio (${bottomAspect}) should match full (${fullAspect})`
+  );
+  assert.ok(
+    Math.abs(fullAspect - rightAspect) < tolerance,
+    `Right aspect ratio (${rightAspect}) should match full (${fullAspect})`
+  );
 });
 
 test('projection of known point should remain consistent across zoom levels', () => {
   const lap = createMockLap();
 
   // Pick a point at distance=500m (should be at corner: x=100, z=50)
-  const testPoint = lap.samples.find(s => s.distance === 500);
+  const testPoint = lap.samples.find((s) => s.distance === 500);
   assert.ok(testPoint, 'Test point should exist');
 
   // Helper to project a point given bounds
@@ -190,7 +202,7 @@ test('projection of known point should remain consistent across zoom levels', ()
   // This means the same world point should project to identical canvas coordinates
   const distance = Math.sqrt(
     Math.pow(fullProjection.x - zoomedProjection.x, 2) +
-    Math.pow(fullProjection.y - zoomedProjection.y, 2)
+      Math.pow(fullProjection.y - zoomedProjection.y, 2)
   );
 
   // Projections should be identical (within floating point tolerance)
