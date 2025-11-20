@@ -75,7 +75,7 @@ test('parseLapFile derives time from distance when LapTime column is missing', (
   assert.equal(lap.metadata.car, 'Toyota GR010');
   assert.equal(lap.metadata.driver, 'Dean Davids');
   assert.equal(lap.metadata.lapTime, 112.993);
-  assert.equal(lap.metadata.lapLength, 5386.80);
+  assert.equal(lap.metadata.lapLength, 5386.8);
 
   // Should have all samples
   assert.equal(lap.samples.length, 3);
@@ -84,11 +84,11 @@ test('parseLapFile derives time from distance when LapTime column is missing', (
   assert.equal(lap.samples[0].distance, 0);
   assert.equal(lap.samples[0].time, 0); // 0% of lap
 
-  assert.equal(lap.samples[1].distance, 2693.400);
+  assert.equal(lap.samples[1].distance, 2693.4);
   // Should be approximately 50% of lap time: (2693.4 / 5386.8) * 112.993 ≈ 56.4965
   assert.ok(Math.abs(lap.samples[1].time - 56.4965) < 0.01);
 
-  assert.equal(lap.samples[2].distance, 5386.800);
+  assert.equal(lap.samples[2].distance, 5386.8);
   // Should be 100% of lap time: 112.993
   assert.equal(lap.samples[2].time, 112.993);
 });
