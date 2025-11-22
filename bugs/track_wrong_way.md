@@ -1,1 +1,0 @@
-the track view is rendering the wrong way around for me on a track. We should always render in the "top down" view.
